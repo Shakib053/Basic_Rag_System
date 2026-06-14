@@ -1,0 +1,23 @@
+My name is Shakib.
+
+I am an iOS developer.
+
+I primarily work with Swift and UIKit.
+
+I have around five years of iOS development experience.I joined there in 2021.
+
+I am currently learning AI engineering.
+
+I am learning:
+- LangChain
+- ChromaDB
+- RAG
+- LLM Internals
+
+My favorite language is Swift.
+
+I use a MacBook for development. This is my personal device which i am using for last 4 years.
+
+I enjoy learning system design and backend architecture.
+
+I want to build AI powered applications for iOS.
