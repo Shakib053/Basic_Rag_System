@@ -18,7 +18,7 @@ vectorstore = Chroma(
 retriever = vectorstore.as_retriever(search_kwargs={"k": 2})
 
 # 3. LLM
-llm = ChatOllama(model="gemma3:1b", temperature=0)
+llm = ChatOllama(model="qwen3:1.7b", temperature=0)
 
 # 4. Prompt — now includes chat_history slot
 prompt = ChatPromptTemplate.from_messages([
@@ -41,12 +41,17 @@ def get_rag_response(question, chat_history):
     # Condense question + history into a standalone question for retrieval
     if chat_history:
         condense_prompt = ChatPromptTemplate.from_messages([
-            ("system", "Given the conversation history and a follow-up question, "
-                       "rewrite the follow-up as a standalone question. "
-                       "Return ONLY the rewritten question, nothing else."),
+        ("system", "Given the conversation history and a follow-up question, "
+           "rewrite the follow-up as a standalone QUESTION (not an answer, not a statement). "
+           "Example:\n"
+           "History: Human: My name is Shakib. AI: Nice to meet you, Shakib.\n"
+           "Follow-up: what do i do\n"
+           "Standalone: What is Shakib's profession?\n\n"
+           "Now rewrite the follow-up below:"),
             MessagesPlaceholder(variable_name="chat_history"),
             ("human", "{question}"),
         ])
+        # print("condense prompt", condense_prompt)
         condense_chain = condense_prompt | llm
         standalone = condense_chain.invoke({
             "chat_history": chat_history,
@@ -55,6 +60,7 @@ def get_rag_response(question, chat_history):
     else:
         standalone = question  # first question needs no rewriting
 
+    print("refined question is: ", standalone)
     # Retrieve using the standalone question
     docs = retriever.invoke(standalone)
     context = format_docs(docs)

@@ -1,0 +1,127 @@
+# Local RAG Pipeline with LangChain
+
+This repository showcases a lightweight, local Retrieval-Augmented Generation (RAG) workflow built with [LangChain](https://www.langchain.com/). It combines local document ingestion, vector search, and chat-based generation without requiring a server API or cloud-hosted inference.
+
+The application runs entirely in the terminal, making it easy to ingest data and ask questions from a simple command-line interface. It is designed as a local RAG demo for anyone who wants to explore the LangChain workflow without building a web app or backend service.
+
+The stack is intentionally simple and fully local:
+
+- **ChromaDB** for vector storage
+- **Hugging Face embeddings** for text representation
+- **Ollama** with **Gemma** for response generation
+
+## How It Works
+
+The workflow is split into two scripts:
+
+1. `ingestion.py`
+   - Reads the source text from `data/personal_info.txt`
+   - Splits the document into smaller chunks
+   - Generates embeddings with `sentence-transformers/all-MiniLM-L6-v2`
+   - Stores the embedded chunks in a local ChromaDB collection at `./chroma_db`
+
+2. `chat.py`
+   - Loads the saved ChromaDB vector store
+   - Uses the same Hugging Face embedding model for retrieval
+   - Calls Ollama’s `gemma3:1b` model to generate responses
+   - Keeps a lightweight chat history so follow-up questions remain context-aware
+
+## Tech Stack
+
+- Python
+- LangChain
+- ChromaDB
+- Hugging Face sentence-transformers
+- Ollama
+- Gemma 3 1B (`gemma3:1b`)
+
+## Project Structure
+
+```text
+.
+├── chat.py
+├── ingestion.py
+├── data/
+│   └── personal_info.txt
+└── chroma_db/              # Created after ingestion
+```
+
+## Prerequisites
+
+Make sure the following tools are installed on your machine:
+
+- Python 3.10 or newer
+- Git
+- Ollama
+
+You also need the Ollama model used by the chat script:
+
+```bash
+ollama pull gemma3:1b
+```
+
+If Ollama is not already running, start it first:
+
+```bash
+ollama serve
+```
+
+## Setup
+
+Clone the repository from GitHub:
+
+```bash
+git clone <your-repo-url>
+cd <repo-folder>
+```
+
+Create and activate a virtual environment:
+
+```bash
+python -m venv venv
+source venv/bin/activate
+```
+
+On Windows, activate it with:
+
+```bash
+venv\Scripts\activate
+```
+
+Install the required Python packages:
+
+```bash
+pip install langchain langchain-chroma langchain-huggingface langchain-ollama langchain-text-splitters python-dotenv chromadb
+```
+
+## Usage
+
+### 1) Build the vector store
+
+Run the ingestion script to chunk the source text and create the ChromaDB index:
+
+```bash
+python ingestion.py
+```
+
+This will read from `data/personal_info.txt` and create the local vector store in `./chroma_db`.
+
+### 2) Start the chat loop
+
+After ingestion is complete, launch the local RAG chat session:
+
+```bash
+python chat.py
+```
+
+Type your questions in the terminal. To exit, enter:
+
+```text
+exit
+```
+
+## Notes
+
+- The assistant only answers from the retrieved context. If the answer is not present in the source text, it will respond with a limited answer such as “I don’t know.”
+- The project is designed for local experimentation and learning, not production deployment.
+- If you change the source text in `data/personal_info.txt`, rerun `python ingestion.py` so the ChromaDB store stays in sync.
