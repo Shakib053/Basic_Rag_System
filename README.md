@@ -8,7 +8,7 @@ The stack is intentionally simple and fully local:
 
 - **ChromaDB** for vector storage
 - **Hugging Face embeddings** for text representation
-- **Ollama** with **Gemma** for response generation
+- **Ollama** with a locally downloaded model for response generation
 
 ## How It Works
 
@@ -23,7 +23,8 @@ The workflow is split into two scripts:
 2. `chat.py`
    - Loads the saved ChromaDB vector store
    - Uses the same Hugging Face embedding model for retrieval
-   - Calls Ollama’s `gemma3:1b` model to generate responses
+   - Calls an Ollama model to generate responses
+   - You can use any model available on the Ollama website by downloading it with `ollama pull <model-name>` and updating the model name in `chat.py`
    - Keeps a lightweight chat history so follow-up questions remain context-aware
 
 ## Tech Stack
@@ -33,7 +34,7 @@ The workflow is split into two scripts:
 - ChromaDB
 - Hugging Face sentence-transformers
 - Ollama
-- Gemma 3 1B (`gemma3:1b`)
+- Any Ollama-compatible model you choose
 
 ## Project Structure
 
@@ -57,14 +58,10 @@ Make sure the following tools are installed on your machine:
 You also need the Ollama model used by the chat script:
 
 ```bash
-ollama pull gemma3:1b
+ollama run <model-name>
 ```
 
-If Ollama is not already running, start it first:
-
-```bash
-ollama serve
-```
+You can browse available models on the Ollama website and use any one that fits your needs. Just make sure the model name in `chat.py` matches the one you pulled locally.
 
 ## Setup
 

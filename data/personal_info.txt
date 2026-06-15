@@ -1,23 +1,153 @@
-My name is Shakib.
+My name is Kazi Tanjim Shakib.
+
+I am a Senior Software Engineer at Samsung R&D Institute Bangladesh.
+
+I have been working at Samsung R&D Institute Bangladesh since 2021.
+
+I have more than 4 years of professional software engineering experience.
+
+I specialize in iOS application development.
 
 I am an iOS developer.
 
 I primarily work with Swift and UIKit.
 
-I have around five years of iOS development experience.I joined there in 2021.
+I have experience with SwiftUI.
+
+I am proficient in Swift programming language.
+
+I am proficient in C programming language.
+
+I am proficient in C++ programming language.
+
+I am proficient in Python programming language.
+
+I have working knowledge of React.js.
+
+I have experience working with Agile methodologies.
+
+I have experience developing large-scale production iOS applications.
+
+I work on the SmartThings iOS application.
+
+I develop new features for the SmartThings iOS application.
+
+I maintain multiple modules of the SmartThings iOS application.
+
+I troubleshoot and debug iOS applications to improve performance and App Store ratings.
+
+I conduct code reviews and provide feedback to team members.
+
+I focus on writing clean, reusable, scalable, and maintainable code.
+
+I create Proof of Concepts (PoCs) to evaluate new iOS features and technologies.
+
+I have experience refactoring large iOS codebases.
+
+I have experience improving application performance.
+
+I have experience integrating third-party libraries and APIs.
+
+I have experience writing unit tests for iOS applications.
+
+I have experience with Test Driven Development (TDD).
+
+I have experience with software design patterns.
+
+I have experience with application architecture.
+
+I have experience with MVVM-C architecture.
+
+I am interested in software architecture and system design.
+
+I enjoy learning backend architecture and distributed systems.
+
+I use Git and GitHub for source control.
+
+I follow a pull-request-based development workflow.
+
+I frequently perform code reviews.
+
+I value code quality and engineering best practices.
+
+I won the Best Code Reviewer Award for Q4 2025.
+
+I received the Icon of the Month Award in March-April 2024.
+
+I received the Excellence Award for Q4 2022.
+
+I was a member of the Team of the Year in 2023.
+
+I hold a Bachelor of Science degree in Computer Science and Engineering from Rajshahi University of Engineering and Technology (RUET).
+
+I graduated from RUET in 2021.
+
+I am based in Dhaka, Bangladesh.
+
+My native language is Bengali.
+
+I am professionally proficient in English.
 
 I am currently learning AI engineering.
 
-I am learning:
-- LangChain
-- ChromaDB
-- RAG
-- LLM Internals
+I am interested in Artificial Intelligence and Machine Learning.
 
-My favorite language is Swift.
+I am learning Large Language Models (LLMs).
 
-I use a MacBook for development. This is my personal device which i am using for last 4 years.
+I am learning Retrieval Augmented Generation (RAG).
 
-I enjoy learning system design and backend architecture.
+I am learning LangChain.
 
-I want to build AI powered applications for iOS.
+I am learning ChromaDB.
+
+I am learning vector databases.
+
+I am learning semantic search.
+
+I am learning embeddings and vector representations.
+
+I am learning how LLMs work internally.
+
+I am interested in prompt engineering.
+
+I am interested in hallucination mitigation techniques.
+
+I am interested in conversational AI systems.
+
+I am interested in AI application architecture.
+
+I use Python for AI and machine learning experiments.
+
+I am building and experimenting with RAG systems.
+
+I use ChromaDB as a vector database for learning and experimentation.
+
+I use LangChain for building AI applications.
+
+I use Hugging Face embedding models for AI projects.
+
+I am interested in integrating AI capabilities into mobile applications.
+
+I want to build AI-powered iOS applications.
+
+I want to integrate OpenAI APIs into iOS applications.
+
+I want to build intelligent chat applications with streaming responses.
+
+I enjoy understanding technologies from first principles.
+
+I prefer detailed technical explanations.
+
+I like understanding how systems work internally.
+
+I enjoy learning through hands-on projects.
+
+I often explore the implementation details behind software systems.
+
+I have completed training in SwiftUI.
+
+I have completed training in Apple's Combine framework.
+
+I have completed training in Retrieval-Augmented Generation (RAG).
+
+I have completed training in Artificial Intelligence foundations.
