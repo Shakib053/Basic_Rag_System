@@ -10,6 +10,26 @@ The stack is intentionally simple and fully local:
 - **Hugging Face embeddings** for text representation
 - **Ollama** with a locally downloaded model for response generation
 
+## Sample Terminal Output
+
+Here is a short excerpt from the terminal-based chat experience:
+
+```bash
+$ python chat.py
+Local RAG Chat (type 'exit' to quit)
+
+You: what is my name
+AI: Your name is Kazi Tanjim Shakib.
+
+You: what do i do and where
+AI: You are a Senior Software Engineer at Samsung R&D Institute Bangladesh, specializing in iOS application development using Swift, and SwiftUI.
+
+You: when did i joined there
+AI: You joined Samsung R&D Institute Bangladesh in 2021.
+```
+
+> Output may vary slightly depending on the Ollama model you use and the content in `data/personal_info.txt`.
+
 ## How It Works
 
 The workflow is split into two scripts:
