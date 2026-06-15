@@ -19,13 +19,30 @@ $ python chat.py
 Local RAG Chat (type 'exit' to quit)
 
 You: what is my name
+RAG retrieval query: what is my name
+
 AI: Your name is Kazi Tanjim Shakib.
 
-You: what do i do and where
-AI: You are a Senior Software Engineer at Samsung R&D Institute Bangladesh, specializing in iOS application development using Swift, and SwiftUI.
+You: what do I do and where
+RAG retrieval query: What is my role and where am I located?
 
-You: when did i joined there
+AI: You are a Senior Software Engineer at Samsung R&D Institute Bangladesh. Your role involves iOS application development, specifically using Swift and UIKit, and you are proficient in Swift, C, and C++.
+
+You: When did i join there
+RAG retrieval query: When did I join there?
+
 AI: You joined Samsung R&D Institute Bangladesh in 2021.
+
+You: what kind of expertise do I have 
+RAG retrieval query: What are the key areas of expertise that I possess?
+
+AI: You have expertise in the following areas:  
+- **Programming Languages**: C++, Python, Swift, C  
+- **Frameworks/Tools**: React.js, SwiftUI, UIKit  
+- **Development Skills**: iOS application development (Swift, UIKit), Agile methodologies, large-scale production apps  
+- **Specialization**: iOS developer with focus on Swift and UIKit  
+
+Let me know if you'd like further details!
 ```
 
 > Output may vary slightly depending on the Ollama model you use and the content in `data/personal_info.txt`.

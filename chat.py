@@ -60,7 +60,7 @@ def get_rag_response(question, chat_history):
     else:
         standalone = question  # first question needs no rewriting
 
-    print("refined question is: ", standalone)
+    print("RAG retrieval query:", standalone)
     # Retrieve using the standalone question
     docs = retriever.invoke(standalone)
     context = format_docs(docs)
