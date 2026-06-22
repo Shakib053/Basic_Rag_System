@@ -22,6 +22,8 @@ vectorstore = Chroma(
 )
 retriever = vectorstore.as_retriever(search_kwargs={"k": 2})
 
+# llm = ChatOllama(model="qwen3:1.7b", temperature=0) runs locally on own mac
+
 # 3. HuggingFace LLM — ChatHuggingFace wrapper
 """
 This is a way of calling HuggingFace using Endpoint
@@ -42,7 +44,7 @@ llm = ChatOpenAI(
     model="Qwen/Qwen2.5-72B-Instruct",   # or any supported model
     openai_api_key=HF_TOKEN,
     openai_api_base="https://router.huggingface.co/v1",
-    temperature=0.1,
+    temperature=0.7,
     max_tokens=512,
 )
 
@@ -96,7 +98,7 @@ def get_rag_response(question, chat_history):
         "question": question,
         "chat_history": chat_history
     })
-    return response.content  # .content works correctly on ChatHuggingFace output
+    return response.content
 
 # 7. Chat loop
 print("\nLocal RAG Chat (type 'exit' to quit)\n")
