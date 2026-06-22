@@ -1,9 +1,14 @@
 from langchain_chroma import Chroma
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_ollama import ChatOllama
+from langchain_huggingface import HuggingFaceEmbeddings, HuggingFaceEndpoint, ChatHuggingFace
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.runnables import RunnablePassthrough
 from langchain_core.messages import HumanMessage, AIMessage
+from langchain_openai import ChatOpenAI
+from dotenv import load_dotenv
+import os
+
+load_dotenv()                                                      
+os.environ["HUGGINGFACE_HUB_TOKEN"] = os.getenv("HF_TOKEN")
+HF_TOKEN = os.getenv("HF_TOKEN")
 
 # 1. Embeddings
 embedding_model = HuggingFaceEmbeddings(
@@ -17,10 +22,31 @@ vectorstore = Chroma(
 )
 retriever = vectorstore.as_retriever(search_kwargs={"k": 2})
 
-# 3. LLM
-llm = ChatOllama(model="qwen3:1.7b", temperature=0)
+# 3. HuggingFace LLM — ChatHuggingFace wrapper
+"""
+This is a way of calling HuggingFace using Endpoint
 
-# 4. Prompt — now includes chat_history slot
+endpoint = HuggingFaceEndpoint(
+    repo_id="Qwen/Qwen2.5-72B-Instruct",  # ← swap here
+    task="conversational",
+    max_new_tokens=512,
+    temperature=0.1,
+    huggingfacehub_api_token=HF_TOKEN,
+)
+# llm = ChatHuggingFace(llm=endpoint)  // Need this if we want to create llm
+
+"""
+
+# 3. OpenAI Chat Interface , much easier, don't need to worry much
+llm = ChatOpenAI(
+    model="Qwen/Qwen2.5-72B-Instruct",   # or any supported model
+    openai_api_key=HF_TOKEN,
+    openai_api_base="https://router.huggingface.co/v1",
+    temperature=0.1,
+    max_tokens=512,
+)
+
+# 4. Prompt
 prompt = ChatPromptTemplate.from_messages([
     ("system", """You are a helpful assistant.
 Use ONLY the context below to answer.
@@ -28,7 +54,7 @@ If the answer is not in context, say 'I don't know'.
 
 Context:
 {context}"""),
-    MessagesPlaceholder(variable_name="chat_history"),  # ← history goes here
+    MessagesPlaceholder(variable_name="chat_history"),
     ("human", "{question}"),
 ])
 
@@ -38,46 +64,43 @@ def format_docs(docs):
 
 # 6. RAG chain with history-aware retrieval
 def get_rag_response(question, chat_history):
-    # Condense question + history into a standalone question for retrieval
     if chat_history:
         condense_prompt = ChatPromptTemplate.from_messages([
-        ("system", "Given the conversation history and a follow-up question, "
-           "rewrite the follow-up as a standalone QUESTION (not an answer, not a statement). "
-           "Example:\n"
-           "History: Human: My name is Shakib. AI: Nice to meet you, Shakib.\n"
-           "Follow-up: what do i do\n"
-           "Standalone: What is Shakib's profession?\n\n"
-           "Now rewrite the follow-up below:"),
+            ("system",
+             "Given the conversation history and a follow-up question, "
+             "rewrite the follow-up as a standalone QUESTION (not an answer, not a statement). "
+             "Example:\n"
+             "History: Human: My name is Shakib. AI: Nice to meet you, Shakib.\n"
+             "Follow-up: what do i do\n"
+             "Standalone: What is Shakib's profession?\n\n"
+             "Now rewrite the follow-up below:"),
             MessagesPlaceholder(variable_name="chat_history"),
             ("human", "{question}"),
         ])
-        # print("condense prompt", condense_prompt)
         condense_chain = condense_prompt | llm
         standalone = condense_chain.invoke({
             "chat_history": chat_history,
             "question": question
         }).content
     else:
-        standalone = question  # first question needs no rewriting
+        standalone = question
 
     print("RAG retrieval query:", standalone)
-    # Retrieve using the standalone question
+
     docs = retriever.invoke(standalone)
     context = format_docs(docs)
 
-    # Generate answer
     rag_chain = prompt | llm
     response = rag_chain.invoke({
         "context": context,
-        "question": question,        # original question shown to user
+        "question": question,
         "chat_history": chat_history
     })
-    return response.content
+    return response.content  # .content works correctly on ChatHuggingFace output
 
 # 7. Chat loop
 print("\nLocal RAG Chat (type 'exit' to quit)\n")
-
-chat_history = []  # grows with each turn
+chat_history = []
 
 while True:
     query = input("You: ").strip()
@@ -89,6 +112,5 @@ while True:
     answer = get_rag_response(query, chat_history)
     print(f"\nAI: {answer}\n")
 
-    # Append this turn to history
     chat_history.append(HumanMessage(content=query))
     chat_history.append(AIMessage(content=answer))
