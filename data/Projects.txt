@@ -1,0 +1,1084 @@
+================================================================================
+KNOWLEDGE BASE: GitHub Portfolio of Kazi Tanjim Shakib (Shakib053)
+================================================================================
+Document Type: Developer Portfolio Knowledge Base
+Source: https://github.com/Shakib053
+Generated: 2026-06-27
+Total Public Repositories: 33
+Primary Roles: Senior Software Engineer | iOS App Developer | Xcode | Problem Solver
+Current Employer: Samsung R&D Institute Bangladesh Ltd.
+Location: Dhaka, Bangladesh
+LinkedIn: https://www.linkedin.com/in/kazi-tanjim-shakib-36589819b/
+================================================================================
+
+SECTION 1: PROFILE SUMMARY
+--------------------------------------------------------------------------------
+Kazi Tanjim Shakib (GitHub: Shakib053) is a Senior Software Engineer working at
+Samsung R&D Institute Bangladesh Ltd. in Dhaka, Bangladesh. His GitHub profile
+describes him as an iOS App Developer with expertise in Xcode and a Problem
+Solver background. He has 33 public repositories spanning competitive programming,
+native iOS development (Swift/SwiftUI), full-stack web development (React, Node.js,
+MongoDB), and AI/ML (RAG systems). His work demonstrates a clear progression from
+front-end HTML/CSS websites through full-stack React applications to native iOS
+apps and most recently AI-powered tooling.
+
+================================================================================
+SECTION 2: REPOSITORY CATALOG (All 33 Public Repositories)
+================================================================================
+
+--------------------------------------------------------------------------------
+REPOSITORY 1: Basic_Rag_System
+--------------------------------------------------------------------------------
+Repository Name: Basic_Rag_System
+GitHub URL: https://github.com/Shakib053/Basic_Rag_System
+Primary Language: Python
+Category: Artificial Intelligence / Machine Learning / RAG
+Last Updated: 2026-06-22
+
+Description:
+A lightweight, local Retrieval-Augmented Generation (RAG) pipeline built with
+LangChain. This project showcases how to build a fully local RAG workflow without
+requiring cloud-hosted inference or a server API. The application runs entirely
+in the terminal, providing a command-line interface for ingesting documents and
+querying them using natural language.
+
+Technologies Used:
+- Python
+- LangChain (document ingestion, vector search, chat-based generation)
+- Local vector store (no cloud dependency)
+- Retrieval-Augmented Generation (RAG) architecture
+
+Key Features:
+- Local document ingestion pipeline
+- Vector search for semantic retrieval
+- Chat-based generation using LangChain
+- Runs fully in the terminal (CLI-based interface)
+- Designed as a local RAG demo without needing a web backend
+
+Purpose / What Was Built:
+Shakib built this project to explore and demonstrate the LangChain RAG workflow
+locally. It combines document loading, embedding, vector similarity search, and
+LLM-based question answering in a self-contained terminal application.
+
+Tags: RAG, LangChain, Python, AI, local-LLM, vector-search, retrieval-augmented-generation
+
+--------------------------------------------------------------------------------
+REPOSITORY 2: MLX-SwiftUI
+--------------------------------------------------------------------------------
+Repository Name: MLX-SwiftUI
+GitHub URL: https://github.com/Shakib053/MLX-SwiftUI
+Primary Language: Swift
+Category: iOS Development / On-Device AI / Machine Learning
+Last Updated: 2026-06-07
+
+Description:
+An iOS/macOS project integrating Apple's MLX framework with SwiftUI. MLX is
+Apple's open-source machine learning framework optimized for Apple Silicon.
+This repository explores running local ML models directly on Apple devices
+using Swift and SwiftUI for the user interface.
+
+Technologies Used:
+- Swift
+- SwiftUI
+- Apple MLX (Machine Learning framework for Apple Silicon)
+- Xcode
+
+Purpose / What Was Built:
+This project demonstrates Shakib's exploration of on-device AI inference using
+Apple's MLX framework combined with SwiftUI. It represents his interest in
+bringing local AI capabilities to Apple platforms without cloud dependency.
+
+Tags: Swift, SwiftUI, MLX, iOS, Apple Silicon, on-device AI, machine learning
+
+--------------------------------------------------------------------------------
+REPOSITORY 3: Stock-Tracker-Website
+--------------------------------------------------------------------------------
+Repository Name: Stock-Tracker-Website
+GitHub URL: https://github.com/Shakib053/Stock-Tracker-Website
+Primary Language: JavaScript
+Category: Full-Stack Web Application / Finance
+Last Updated: 2026-06-10
+
+Description:
+A private stock profit tracker web application featuring Google sign-in
+authentication and secure per-user cloud data storage. Users can track their
+stock investments and calculate profit/loss with data persisted per account.
+
+Technologies Used:
+- JavaScript
+- Google Authentication (Firebase or Google OAuth)
+- Cloud database (per-user data storage)
+- Web frontend technologies
+
+Key Features:
+- Google Sign-In integration for user authentication
+- Per-user secure data isolation in the cloud
+- Stock profit/loss tracking functionality
+- Cloud data persistence
+
+Purpose / What Was Built:
+Shakib built a personal finance tool that allows users to track stock trades
+and calculate profit, with each user's data kept private and secure via Google
+authentication and cloud storage.
+
+Tags: JavaScript, stock-tracker, Google-auth, cloud-storage, finance-app, web-app
+
+--------------------------------------------------------------------------------
+REPOSITORY 4: SampleAppForFirebaseAuthentication
+--------------------------------------------------------------------------------
+Repository Name: SampleAppForFirebaseAuthentication
+GitHub URL: https://github.com/Shakib053/SampleAppForFirebaseAuthentication
+Primary Language: Swift
+Category: iOS Development / Authentication / Firebase
+Last Updated: 2026-05-05
+
+Description:
+A sample iOS application demonstrating Firebase Authentication integration.
+This is an educational/reference project showing how to implement user
+authentication (login, signup, sign-out) in a native iOS app using Firebase.
+
+Technologies Used:
+- Swift
+- Xcode
+- Firebase Authentication SDK
+- iOS SDK
+
+Key Features:
+- Firebase Authentication integration in iOS
+- User registration and login flows
+- Sign-out functionality
+- Demonstrates Firebase SDK setup and usage in Swift
+
+Purpose / What Was Built:
+This is a learning/reference project Shakib created to demonstrate how Firebase
+Authentication works within a native iOS application. It can be used as a
+template for adding auth to iOS projects.
+
+Tags: Swift, iOS, Firebase, Authentication, Xcode, sample-app
+
+--------------------------------------------------------------------------------
+REPOSITORY 5: FlashChat
+--------------------------------------------------------------------------------
+Repository Name: FlashChat
+GitHub URL: https://github.com/Shakib053/FlashChat
+Primary Language: Swift
+Category: iOS Development / Chat Application / Firebase
+Last Updated: 2025-11-18
+
+Description:
+Flash Chat is an internet-based messaging iOS application similar to WhatsApp,
+built using UIKit Table Views, custom cells, and Firebase as the cloud backend
+database. This project was created as part of iOS app development learning,
+focusing on Table View mastery and real-time messaging.
+
+Technologies Used:
+- Swift
+- UIKit (Table Views, custom cells)
+- Firebase (Firestore/Realtime Database as backend)
+- Xcode
+
+Key Features:
+- Real-time cloud-based messaging
+- Table View implementation with custom cells
+- Firebase backend for message storage and retrieval
+- User authentication for chat access
+
+Purpose / What Was Built:
+Shakib built a WhatsApp-like messaging app to master UIKit Table Views and
+integrate Firebase as a cloud backend. The project demonstrates key iOS
+development fundamentals: Table Views, custom UI cells, and real-time data sync.
+
+Tags: Swift, iOS, UIKit, Firebase, chat-app, real-time-messaging, TableView, Xcode
+
+--------------------------------------------------------------------------------
+REPOSITORY 6: Salah
+--------------------------------------------------------------------------------
+Repository Name: Salah
+GitHub URL: https://github.com/Shakib053/Salah
+Primary Language: Swift
+Category: iOS Development / Utility App / Open Source
+Last Updated: 2025-11-16
+
+Description:
+Salah is a non-profit, open-source iOS application for Islamic prayer timings
+and tracking. Built using native iOS technologies including SwiftUI and Combine.
+The app provides prayer time information and tracking functionality. The project
+is open to contributions and was a personal pet project.
+
+Technologies Used:
+- Swift
+- SwiftUI (UI layer)
+- Combine (reactive programming / data binding)
+- Xcode
+
+Key Features:
+- Islamic prayer (Salah) timing display
+- Prayer time tracker
+- Non-profit, open-source app
+- Built with modern SwiftUI and Combine architecture
+
+Purpose / What Was Built:
+Shakib built this as a personal passion project — a prayer timing and tracker
+app for daily Islamic Salah. It showcases production-quality SwiftUI and Combine
+usage and is open for community contributions.
+
+Tags: Swift, SwiftUI, Combine, iOS, prayer-times, Islamic-app, open-source, utility
+
+--------------------------------------------------------------------------------
+REPOSITORY 7: ToDoManager-iOS
+--------------------------------------------------------------------------------
+Repository Name: ToDoManager-iOS
+GitHub URL: https://github.com/Shakib053/ToDoManager-iOS
+Primary Language: Swift
+Category: iOS Development / Productivity / SwiftData / iCloud
+Last Updated: 2025-07-28
+
+Description:
+A persistent To-Do Manager iOS application built using SwiftUI for the UI and
+SwiftData for data persistence. The app allows users to input daily tasks, and
+all data is persisted using SwiftData, which keeps data synced with iCloud
+storage automatically.
+
+Technologies Used:
+- Swift
+- SwiftUI (UI framework)
+- SwiftData (data persistence/ORM)
+- iCloud (automatic data sync via SwiftData)
+- Xcode
+
+Key Features:
+- Create, read, update, delete (CRUD) to-do items
+- Persistent data storage using SwiftData with @Model macro
+- iCloud sync for cross-device data continuity
+- Clean SwiftUI interface
+
+Technical Highlights:
+- Uses @Model macro on model class for SwiftData tracking
+- SwiftData persists data locally and syncs with iCloud
+- Demonstrates modern iOS data persistence patterns (replacing CoreData)
+
+Purpose / What Was Built:
+Shakib built a full-featured daily task manager app to learn and demonstrate
+SwiftData (Apple's new data persistence framework) integrated with SwiftUI.
+The app persists user todo items across app sessions and syncs via iCloud.
+
+Tags: Swift, SwiftUI, SwiftData, iCloud, iOS, todo-app, data-persistence, Xcode
+
+--------------------------------------------------------------------------------
+REPOSITORY 8: CachedAsyncImage-SwiftUI
+--------------------------------------------------------------------------------
+Repository Name: CachedAsyncImage-SwiftUI
+GitHub URL: https://github.com/Shakib053/CachedAsyncImage-SwiftUI
+Primary Language: Swift (library/package)
+Category: iOS Development / SwiftUI / Networking / Open Source Library
+Last Updated: 2025-05-18
+
+Description:
+An AsyncImage library for SwiftUI with built-in caching capability. This is a
+Swift package that extends SwiftUI's native AsyncImage with image caching to
+improve performance and reduce redundant network requests.
+
+Technologies Used:
+- Swift
+- SwiftUI
+- URLCache / in-memory caching
+- Swift Package Manager
+
+Key Features:
+- Drop-in replacement for AsyncImage with caching
+- Reduces network calls by caching previously loaded images
+- SwiftUI compatible API
+
+Purpose / What Was Built:
+Shakib created a reusable Swift library to add caching to SwiftUI's AsyncImage,
+solving a common performance problem in SwiftUI apps that load remote images.
+
+Tags: Swift, SwiftUI, AsyncImage, caching, iOS, library, Swift-Package, networking
+
+--------------------------------------------------------------------------------
+REPOSITORY 9: UVA
+--------------------------------------------------------------------------------
+Repository Name: UVA
+GitHub URL: https://github.com/Shakib053/UVA
+Primary Language: C++
+Category: Competitive Programming
+Last Updated: 2025-10-07
+
+Description:
+A collection of solutions to UVa Online Judge competitive programming problems,
+written in C++. UVa is one of the oldest and most comprehensive online judges
+for competitive programming.
+
+Technologies Used:
+- C++
+- Algorithms and Data Structures
+- UVa Online Judge problem set
+
+Purpose / What Was Built:
+Shakib's solutions to UVa competitive programming problems, demonstrating
+algorithmic problem-solving skills in C++.
+
+Tags: C++, competitive-programming, algorithms, data-structures, UVa, online-judge
+
+--------------------------------------------------------------------------------
+REPOSITORY 10: Codeforces-Codes
+--------------------------------------------------------------------------------
+Repository Name: Codeforces-Codes
+GitHub URL: https://github.com/Shakib053/Codeforces-Codes
+Primary Language: C++
+Category: Competitive Programming
+Stars: 0
+Commits: 348 commits
+
+Description:
+A large collection of C++ solutions to Codeforces competitive programming
+problems. The repository contains 348 commits and hundreds of individual problem
+solutions organized by problem ID (e.g., 1003A.cpp, 1325B.cpp, etc.).
+
+Technologies Used:
+- C++
+- Algorithms (greedy, dynamic programming, graph theory, number theory, etc.)
+- Data Structures (arrays, maps, sets, priority queues, etc.)
+- Codeforces Online Judge
+
+Key Contents:
+- Hundreds of solved Codeforces problems spanning Divisions 1, 2, and 3
+- Problems ranging from difficulty A (easy) to F (advanced)
+- Files named by Codeforces problem ID (e.g., 1003A.cpp through 1374B.cpp+)
+- Organized with some problems in a separate Codeforces/ subdirectory
+
+Purpose / What Was Built:
+This is Shakib's primary competitive programming repository, documenting years
+of problem-solving practice on Codeforces. It reflects strong algorithmic
+thinking and consistent practice in C++.
+
+Tags: C++, competitive-programming, Codeforces, algorithms, data-structures, problem-solving
+
+--------------------------------------------------------------------------------
+REPOSITORY 11: Personal-Practice-Codes
+--------------------------------------------------------------------------------
+Repository Name: Personal-Practice-Codes
+GitHub URL: https://github.com/Shakib053/Personal-Practice-Codes
+Primary Language: C++
+Category: Competitive Programming / Practice
+Last Updated: 2025-11-09
+
+Description:
+Personal practice codes in C++ for algorithmic and programming exercises
+outside of specific online judges.
+
+Technologies Used:
+- C++
+- General algorithms and data structures
+
+Tags: C++, practice, algorithms, problem-solving
+
+--------------------------------------------------------------------------------
+REPOSITORY 12: apartment-selling-server
+--------------------------------------------------------------------------------
+Repository Name: apartment-selling-server
+GitHub URL: https://github.com/Shakib053/apartment-selling-server
+Primary Language: JavaScript (Node.js)
+Category: Full-Stack Web / Backend / REST API
+Last Updated: 2025-10-07
+
+Description:
+The server-side (backend) of an apartment selling website. Built with MongoDB
+and Express.js, this backend is hosted on Heroku and serves data to the
+apartment-selling-client frontend. It implements full CRUD operations and uses
+environment variables (.env) to protect sensitive database credentials.
+
+Technologies Used:
+- JavaScript (Node.js)
+- Express.js (REST API framework)
+- MongoDB (NoSQL database)
+- Heroku (hosting)
+- .env (environment variable management for security)
+
+Key Features:
+- RESTful API with GET, POST, PUT, DELETE HTTP methods
+- MongoDB Atlas as cloud database
+- Secure credential management via .env file
+- CORS-enabled API for frontend consumption
+
+Purpose / What Was Built:
+Shakib built the backend service for a real-estate apartment listing and selling
+platform. The server exposes REST endpoints that the React client consumes to
+list, view, create, update, and delete apartment listings.
+
+Tags: JavaScript, Node.js, Express.js, MongoDB, REST-API, backend, Heroku, real-estate
+
+--------------------------------------------------------------------------------
+REPOSITORY 13: apartment-selling-client
+--------------------------------------------------------------------------------
+Repository Name: apartment-selling-client
+GitHub URL: https://github.com/Shakib053/apartment-selling-client
+Primary Language: JavaScript (React)
+Category: Full-Stack Web / Frontend / React
+Last Updated: 2025-10-07
+
+Description:
+The client-side (frontend) of an apartment selling website. This is the React
+frontend that connects to the apartment-selling-server backend.
+
+Technologies Used:
+- JavaScript
+- React.js
+- REST API consumption (from apartment-selling-server)
+
+Key Features:
+- Apartment listing browsing UI
+- Integration with the Express/MongoDB backend
+
+Purpose / What Was Built:
+The frontend React application for the apartment selling platform, paired with
+the apartment-selling-server backend. Together they form a full-stack MERN
+(MongoDB, Express, React, Node) application for real-estate listings.
+
+Tags: JavaScript, React.js, frontend, MERN, real-estate, web-app
+
+--------------------------------------------------------------------------------
+REPOSITORY 14: react-tourism-website-client
+--------------------------------------------------------------------------------
+Repository Name: react-tourism-website-client
+GitHub URL: https://github.com/Shakib053/react-tourism-website-client
+Primary Language: JavaScript (React)
+Category: Full-Stack Web / Travel / Tourism
+Live Site: https://travel-booking-site-dbba2.firebaseapp.com/
+Last Updated: 2025-10-07
+
+Description:
+A full-featured travel and tourism booking website built with React.js on the
+frontend, with MongoDB and Express.js on the backend (react-tourism-website-server).
+Users can sign in with email/password or Google OAuth, browse travel destinations,
+book destinations, and manage their orders. Admins can view all user orders and
+delete them.
+
+Technologies Used:
+- JavaScript, React.js (frontend)
+- MongoDB Atlas (database)
+- Express.js (backend API)
+- Firebase (authentication and hosting)
+- Google OAuth (sign-in provider)
+
+Key Features:
+- User authentication via email/password and Google Sign-In
+- Browse and book travel destinations
+- Add new travel destinations to the database
+- View personal order history
+- Admin view of all user orders with delete functionality
+- Deployed on Firebase Hosting
+
+Purpose / What Was Built:
+Shakib built a complete travel booking platform with user authentication,
+destination browsing, booking management, and admin controls. This demonstrates
+full-stack development with the MERN stack plus Firebase.
+
+Tags: JavaScript, React.js, MongoDB, Express.js, Firebase, Google-OAuth, tourism, booking, MERN, full-stack
+
+--------------------------------------------------------------------------------
+REPOSITORY 15: react-tourism-website-server
+--------------------------------------------------------------------------------
+Repository Name: react-tourism-website-server
+GitHub URL: https://github.com/Shakib053/react-tourism-website-server
+Primary Language: JavaScript (Node.js)
+Category: Full-Stack Web / Backend / Travel
+Last Updated: 2025-10-07
+
+Description:
+The backend/server-side of the React tourism website. Provides REST API endpoints
+for the react-tourism-website-client frontend to manage destinations and bookings.
+
+Technologies Used:
+- JavaScript (Node.js)
+- Express.js
+- MongoDB Atlas
+
+Tags: JavaScript, Node.js, Express.js, MongoDB, REST-API, backend, tourism
+
+--------------------------------------------------------------------------------
+REPOSITORY 16: react-healthcare-website
+--------------------------------------------------------------------------------
+Repository Name: react-healthcare-website
+GitHub URL: https://github.com/Shakib053/react-healthcare-website
+Primary Language: JavaScript (React)
+Category: Full-Stack Web / Healthcare / React
+Live Site: https://health-care-website-fc690.firebaseapp.com/
+Last Updated: 2025-10-07
+
+Description:
+A medical care website built with React.js. The website has multiple sections
+with dedicated routes. Implements private routing: unauthenticated users cannot
+access protected pages like doctor booking or service details. Styled with
+custom CSS and Bootstrap. Deployed on Firebase.
+
+Technologies Used:
+- JavaScript, React.js
+- React Router (multi-page routing)
+- Private Route implementation
+- Bootstrap (CSS framework)
+- Custom CSS
+- Firebase (hosting and authentication)
+
+Key Features:
+- Multiple sections with dedicated routes
+- Private Route protection (unauthenticated users blocked from booking and service details)
+- Doctor browsing and appointment booking (for authenticated users)
+- User login/authentication integration
+- Bootstrap + custom CSS styling
+- Firebase hosting
+
+Purpose / What Was Built:
+Shakib built a healthcare services website where users can browse medical
+services and book doctors, but booking/details are protected behind authentication.
+It demonstrates React routing, private routes, and UI component design.
+
+Tags: JavaScript, React.js, React-Router, private-routes, healthcare, Bootstrap, Firebase, web-app
+
+--------------------------------------------------------------------------------
+REPOSITORY 17: react-online-learning
+--------------------------------------------------------------------------------
+Repository Name: react-online-learning
+GitHub URL: https://github.com/Shakib053/react-online-learning
+Primary Language: JavaScript (React)
+Category: Full-Stack Web / Education / React
+Live Site: https://simplecharityorganization.netlify.app/
+Last Updated: 2025-10-07
+
+Description:
+A React-based online learning academy website. Features multiple sections with
+routing, a persistent header and footer, custom API data loading, and a 404
+error page for invalid routes. Two custom APIs serve different data sections of
+the site. Deployed on Netlify.
+
+Technologies Used:
+- JavaScript, React.js
+- React Router (page routing with 404 handling)
+- Custom-built JSON APIs for data
+- Netlify (deployment)
+
+Key Features:
+- Multi-section online academy layout
+- React Router with fixed header/footer and 404 error handling
+- Two separate custom APIs for different content sections
+- Custom favicon and logo
+
+Purpose / What Was Built:
+An online learning platform frontend demonstrating React component architecture,
+routing best practices, custom API integration, and deployment to Netlify.
+
+Tags: JavaScript, React.js, React-Router, education, online-learning, Netlify, API, web-app
+
+--------------------------------------------------------------------------------
+REPOSITORY 18: simple-shopping-site
+--------------------------------------------------------------------------------
+Repository Name: simple-shopping-site
+GitHub URL: https://github.com/Shakib053/simple-shopping-site
+Primary Language: HTML
+Category: Web Development / E-commerce / Beginner Project
+Live Site: https://simpleshoppingsite.netlify.app/
+Last Updated: 2025-10-07
+
+Description:
+A simple shopping website built with HTML, CSS, and JavaScript. Deployed on
+Netlify as a static site.
+
+Technologies Used:
+- HTML, CSS, JavaScript
+- Netlify (deployment)
+
+Purpose / What Was Built:
+A simple e-commerce product listing frontend page.
+
+Tags: HTML, CSS, JavaScript, shopping, static-site, Netlify, web-dev
+
+--------------------------------------------------------------------------------
+REPOSITORY 19: book-archive
+--------------------------------------------------------------------------------
+Repository Name: book-archive
+GitHub URL: https://github.com/Shakib053/book-archive
+Primary Language: JavaScript
+Category: Web Development / Books / Search Application
+Live Site: https://simplebooksearcb.netlify.app/
+Last Updated: 2025-10-07
+
+Description:
+A book archive search web application. Users can search for books and retrieve
+information. Deployed on Netlify.
+
+Technologies Used:
+- JavaScript
+- Book/library API (for searching books)
+- HTML, CSS
+
+Purpose / What Was Built:
+A book search and archive application that integrates with a book API to allow
+users to browse and search for books.
+
+Tags: JavaScript, book-search, archive, API, web-app, Netlify
+
+--------------------------------------------------------------------------------
+REPOSITORY 20: niche-shopping-cart
+--------------------------------------------------------------------------------
+Repository Name: niche-shopping-cart
+GitHub URL: https://github.com/Shakib053/niche-shopping-cart
+Primary Language: HTML
+Category: Web Development / E-commerce / Shopping Cart
+Last Updated: 2025-10-07
+
+Description:
+A niche shopping cart implementation built with HTML, CSS, and JavaScript.
+Demonstrates shopping cart functionality on the frontend.
+
+Technologies Used:
+- HTML, CSS, JavaScript
+
+Tags: HTML, CSS, JavaScript, shopping-cart, e-commerce, web-dev
+
+--------------------------------------------------------------------------------
+REPOSITORY 21: honda-selling-site
+--------------------------------------------------------------------------------
+Repository Name: honda-selling-site
+GitHub URL: https://github.com/Shakib053/honda-selling-site
+Primary Language: HTML
+Category: Web Development / Automotive / Static Site
+Live Site: https://hondasellingwebsite.netlify.app/
+Last Updated: 2025-10-07
+
+Description:
+A Honda motorcycle/vehicle selling website. A static front-end site showcasing
+Honda products, deployed on Netlify.
+
+Technologies Used:
+- HTML, CSS, JavaScript
+- Netlify (deployment)
+
+Tags: HTML, CSS, static-site, automotive, Honda, Netlify, web-dev
+
+--------------------------------------------------------------------------------
+REPOSITORY 22: simple-firebase-authentication
+--------------------------------------------------------------------------------
+Repository Name: simple-firebase-authentication
+GitHub URL: https://github.com/Shakib053/simple-firebase-authentication
+Primary Language: JavaScript
+Category: Web Development / Authentication / Firebase
+Live Site: https://simple-firebase-authenti-4a49b.firebaseapp.com/
+Last Updated: 2025-10-07
+
+Description:
+A simple web project demonstrating Firebase Authentication in a JavaScript
+web application. Hosted on Firebase Hosting.
+
+Technologies Used:
+- JavaScript
+- Firebase Authentication
+- Firebase Hosting
+
+Purpose / What Was Built:
+A minimal demo/learning project to understand and demonstrate Firebase
+Authentication on the web (email/password or social sign-in).
+
+Tags: JavaScript, Firebase, authentication, web-dev, Firebase-Hosting
+
+--------------------------------------------------------------------------------
+REPOSITORY 23: Simple_Pin_Matcher
+--------------------------------------------------------------------------------
+Repository Name: Simple_Pin_Matcher
+GitHub URL: https://github.com/Shakib053/Simple_Pin_Matcher
+Primary Language: HTML
+Category: Web Development / Game / Interactive UI
+Last Updated: 2025-10-07
+
+Description:
+A simple pin-matching interactive web application. Users attempt to match pins
+in a UI-based game or puzzle built with HTML, CSS, and JavaScript.
+
+Technologies Used:
+- HTML, CSS, JavaScript
+
+Tags: HTML, JavaScript, interactive, game, pin-matcher, web-dev
+
+--------------------------------------------------------------------------------
+REPOSITORY 24: nike-react-practice
+--------------------------------------------------------------------------------
+Repository Name: nike-react-practice
+GitHub URL: https://github.com/Shakib053/nike-react-practice
+Primary Language: HTML (React/JSX)
+Category: Web Development / React Practice / UI Clone
+Last Updated: 2025-11-09
+
+Description:
+A Nike-themed React practice project. Built to practice React component design,
+styling, and building product showcase UI similar to the Nike website.
+
+Technologies Used:
+- HTML, JavaScript, React.js (or HTML/CSS clone)
+- CSS/Styling
+
+Purpose / What Was Built:
+A Nike website UI clone or inspired layout as a React practice exercise.
+
+Tags: React, HTML, CSS, Nike, UI-clone, practice, web-dev
+
+--------------------------------------------------------------------------------
+REPOSITORY 25: E-commerce-practise
+--------------------------------------------------------------------------------
+Repository Name: E-commerce-practise
+GitHub URL: https://github.com/Shakib053/E-commerce-practise
+Primary Language: HTML
+Category: Web Development / E-commerce / Practice
+Last Updated: 2025-10-07
+
+Description:
+An e-commerce practice project built with HTML, CSS, and JavaScript to
+practice building product listing and shopping UI patterns.
+
+Technologies Used:
+- HTML, CSS, JavaScript
+
+Tags: HTML, CSS, JavaScript, e-commerce, practice, web-dev
+
+--------------------------------------------------------------------------------
+REPOSITORY 26: football-site
+--------------------------------------------------------------------------------
+Repository Name: football-site
+GitHub URL: https://github.com/Shakib053/football-site
+Primary Language: HTML
+Category: Web Development / Sports / Static Site
+Last Updated: 2025-10-07
+
+Description:
+A football (soccer) themed website built with HTML, CSS, and JavaScript.
+A sports news or team showcase static website.
+
+Technologies Used:
+- HTML, CSS, JavaScript
+
+Tags: HTML, CSS, JavaScript, football, soccer, sports, static-site, web-dev
+
+--------------------------------------------------------------------------------
+REPOSITORY 27: leaderboard
+--------------------------------------------------------------------------------
+Repository Name: leaderboard
+GitHub URL: https://github.com/Shakib053/leaderboard
+Primary Language: HTML
+Category: Web Development / UI Component / Leaderboard
+Last Updated: 2025-10-07
+
+Description:
+A leaderboard UI component or application built with HTML, CSS, and JavaScript.
+Displays ranked entries for games or competitions.
+
+Technologies Used:
+- HTML, CSS, JavaScript
+
+Tags: HTML, CSS, JavaScript, leaderboard, UI, web-dev
+
+--------------------------------------------------------------------------------
+REPOSITORY 28: assignment-one
+--------------------------------------------------------------------------------
+Repository Name: assignment-one
+GitHub URL: https://github.com/Shakib053/assignment-one
+Primary Language: HTML
+Category: Web Development / Academic Assignment
+Last Updated: 2025-10-07
+
+Description:
+A web development assignment project built with HTML, CSS, and JavaScript.
+Likely an early academic or course assignment demonstrating basic web skills.
+
+Technologies Used:
+- HTML, CSS, JavaScript
+
+Tags: HTML, CSS, JavaScript, assignment, academic, web-dev
+
+--------------------------------------------------------------------------------
+REPOSITORY 29: Resturant-Project
+--------------------------------------------------------------------------------
+Repository Name: Resturant-Project
+GitHub URL: https://github.com/Shakib053/Resturant-Project
+Primary Language: HTML (47.7%), CSS (45.4%), JavaScript (6.9%)
+Category: Web Development / Restaurant / Responsive Design
+Last Updated: 2025-10-07
+
+Description:
+A fully responsive restaurant website. Designed with responsive layouts for
+mobile, tablet, and laptop/desktop devices based on screen resolution. Includes
+images and styling representing a restaurant's web presence.
+
+Technologies Used:
+- HTML
+- CSS (custom responsive styling)
+- JavaScript (basic interactivity via program.js)
+
+Key Features:
+- Fully responsive design (mobile, tablet, laptop, desktop)
+- Restaurant-themed content and imagery
+- Custom CSS for multi-device layout
+- Minimal JavaScript for UI interaction
+
+Purpose / What Was Built:
+Shakib built a complete responsive restaurant website as a front-end project,
+demonstrating CSS responsive design techniques across different device sizes.
+
+Tags: HTML, CSS, JavaScript, restaurant, responsive-design, mobile-first, web-dev
+
+--------------------------------------------------------------------------------
+REPOSITORY 30: todo
+--------------------------------------------------------------------------------
+Repository Name: todo
+GitHub URL: https://github.com/Shakib053/todo
+Primary Language: HTML (60.6%), JavaScript (30.3%), SCSS (9.1%)
+Category: Web Development / Productivity / To-Do App
+Last Updated: 2025-11-09
+
+Description:
+A web-based to-do list application built with HTML, JavaScript, and SCSS
+(compiled to CSS). Users can add, manage, and track tasks in the browser.
+
+Technologies Used:
+- HTML
+- JavaScript
+- SCSS (Sass — compiled to CSS using todos.scss → todos.css)
+- Source map (todos.css.map for debugging)
+
+Key Features:
+- Add and manage to-do items in the browser
+- SCSS for modular, maintainable CSS
+- Basic JavaScript task management logic
+
+Purpose / What Was Built:
+A front-end to-do list web app demonstrating SCSS usage and DOM manipulation
+with JavaScript for task management in the browser.
+
+Tags: HTML, JavaScript, SCSS, Sass, todo, task-manager, web-dev
+
+--------------------------------------------------------------------------------
+REPOSITORY 31: Tourism-site
+--------------------------------------------------------------------------------
+Repository Name: Tourism-site
+GitHub URL: https://github.com/Shakib053/Tourism-site
+Primary Language: HTML (100%)
+Category: Web Development / Tourism / Bootstrap
+Last Updated: 2025-10-07
+
+Description:
+A static tourism website built with HTML using Bootstrap for responsive layout.
+Features beach destination imagery and tourism-related content. Built with
+Bootstrap's CSS and JavaScript components included locally.
+
+Technologies Used:
+- HTML
+- Bootstrap (bootstrap.min.css, bootstrap.min.js — bundled locally)
+- Tourism/travel imagery (beach photos, hotel images)
+
+Key Features:
+- Tourism destination showcase (beaches, hotels)
+- Bootstrap-based responsive layout
+- Static multi-section website
+
+Purpose / What Was Built:
+A static HTML tourism website using Bootstrap to practice responsive layout
+design and travel/destination content structure.
+
+Tags: HTML, Bootstrap, tourism, travel, static-site, responsive, web-dev
+
+--------------------------------------------------------------------------------
+REPOSITORY 32: Online-School
+--------------------------------------------------------------------------------
+Repository Name: Online-School
+GitHub URL: https://github.com/Shakib053/Online-School
+Primary Language: HTML (81.4%), CSS (13.4%), JavaScript (5.2%)
+Category: Web Development / Education / Bootstrap
+Last Updated: 2025-10-07
+
+Description:
+An online school/education website built with HTML, CSS, and JavaScript using
+Bootstrap. Multi-section layout covering courses (engineering, physics, etc.),
+personalized learning features, and educational content sections. Includes
+multiple images for different subjects and UI sections.
+
+Technologies Used:
+- HTML
+- CSS (custom + Bootstrap)
+- JavaScript (interactivity via program.js)
+- Bootstrap (bootstrap.min.css, bootstrap.min.js bundled locally)
+
+Key Features:
+- Multi-section educational website (courses, subjects, features)
+- Bootstrap responsive layout
+- Subject-specific imagery (engineering, physics, etc.)
+- Quick access and personalized learning UI sections
+
+Purpose / What Was Built:
+A multi-section online school landing page demonstrating Bootstrap layout skills,
+CSS customization, and organized educational content presentation.
+
+Tags: HTML, CSS, JavaScript, Bootstrap, education, online-school, web-dev, responsive
+
+--------------------------------------------------------------------------------
+REPOSITORY 33: Shakib053 (GitHub Profile README)
+--------------------------------------------------------------------------------
+Repository Name: Shakib053
+GitHub URL: https://github.com/Shakib053/Shakib053
+Primary Language: None (Markdown config)
+Category: GitHub Profile / Meta
+Stars: 1
+
+Description:
+The special GitHub profile repository. Contains the README.md that appears on
+Kazi Tanjim Shakib's GitHub profile page (github.com/Shakib053). Currently empty
+but serves as the profile configuration repository.
+
+Tags: GitHub-profile, README, config
+
+================================================================================
+SECTION 3: TECHNOLOGY SKILLS SUMMARY (Derived from Repositories)
+================================================================================
+
+PROGRAMMING LANGUAGES:
+- Swift (primary iOS language — used in 6+ repositories)
+- JavaScript (full-stack web — used in 8+ repositories)
+- Python (AI/RAG projects)
+- C++ (competitive programming — used in 3 repositories with 348+ Codeforces solutions)
+- HTML/CSS/SCSS (web frontend — used in 12+ repositories)
+
+IOS / APPLE PLATFORM:
+- SwiftUI (primary iOS UI framework)
+- UIKit (Table Views, custom cells)
+- Combine (reactive programming)
+- SwiftData (data persistence, iCloud sync)
+- Firebase iOS SDK (authentication)
+- Apple MLX (on-device machine learning)
+- Xcode (IDE)
+- Swift Package Manager
+
+WEB FRONTEND:
+- React.js (multiple full-stack projects)
+- React Router (multi-page routing, private routes)
+- Bootstrap (CSS framework)
+- SCSS/Sass (CSS preprocessor)
+- Responsive design (mobile-first approach)
+
+WEB BACKEND:
+- Node.js + Express.js (REST API)
+- MongoDB / MongoDB Atlas (NoSQL database)
+- Heroku (server hosting)
+- Firebase Hosting
+- Netlify (static site hosting)
+- .env / environment variable security
+
+AUTHENTICATION:
+- Firebase Authentication (web and iOS)
+- Google OAuth / Google Sign-In
+- Email/Password authentication flows
+
+AI / MACHINE LEARNING:
+- LangChain (RAG pipeline)
+- Apple MLX (on-device inference)
+- Retrieval-Augmented Generation (RAG)
+- Vector search / semantic retrieval
+- Local LLM workflows
+
+DATABASES:
+- MongoDB Atlas (cloud NoSQL)
+- Firebase Firestore / Realtime Database
+- SwiftData + iCloud (iOS-native persistence)
+
+COMPETITIVE PROGRAMMING:
+- Codeforces (348+ solutions)
+- UVa Online Judge
+- C++ algorithms and data structures
+
+================================================================================
+SECTION 4: PROJECT CATEGORIES
+================================================================================
+
+iOS NATIVE APPS (Swift/SwiftUI):
+1. MLX-SwiftUI — On-device AI with Apple MLX
+2. SampleAppForFirebaseAuthentication — Firebase Auth demo
+3. FlashChat — Real-time messaging app (Firebase backend)
+4. Salah — Prayer timing and tracker (open-source)
+5. ToDoManager-iOS — Persistent to-do app (SwiftData + iCloud)
+6. CachedAsyncImage-SwiftUI — Reusable caching image library
+
+AI / MACHINE LEARNING:
+1. Basic_Rag_System — Local RAG pipeline with LangChain (Python)
+2. MLX-SwiftUI — On-device ML with Apple MLX (Swift)
+
+FULL-STACK WEB (MERN Stack):
+1. apartment-selling-server + apartment-selling-client — Real-estate platform
+2. react-tourism-website-server + react-tourism-website-client — Travel booking site
+3. react-healthcare-website — Medical services website
+4. react-online-learning — Online academy website
+5. Stock-Tracker-Website — Personal stock profit tracker with Google auth
+6. simple-firebase-authentication — Firebase Auth web demo
+7. book-archive — Book search application
+
+STATIC / FRONTEND WEB SITES:
+1. Resturant-Project — Responsive restaurant website (HTML/CSS/JS)
+2. Tourism-site — Tourism site with Bootstrap
+3. Online-School — Online school website with Bootstrap
+4. todo — To-do app with SCSS
+5. simple-shopping-site — Shopping product listing
+6. niche-shopping-cart — Shopping cart UI
+7. honda-selling-site — Automotive product site
+8. football-site — Sports website
+9. leaderboard — Leaderboard UI
+10. Simple_Pin_Matcher — Pin matching interactive UI
+11. assignment-one — Academic web assignment
+12. E-commerce-practise — E-commerce practice project
+13. nike-react-practice — Nike-themed React practice
+
+COMPETITIVE PROGRAMMING:
+1. Codeforces-Codes — 348+ C++ solutions to Codeforces problems
+2. UVA — C++ solutions to UVa Online Judge problems
+3. Personal-Practice-Codes — General C++ practice
+
+================================================================================
+SECTION 5: Q&A KNOWLEDGE PAIRS (For RAG Retrieval)
+================================================================================
+
+Q: What programming languages does Shakib053 use?
+A: Shakib053 uses Swift (iOS), JavaScript (web/full-stack), Python (AI/ML), C++ (competitive programming), and HTML/CSS/SCSS (web frontend).
+
+Q: Does Shakib053 have experience with iOS development?
+A: Yes. Shakib053 has 6 iOS repositories using Swift, SwiftUI, UIKit, Combine, SwiftData, Firebase iOS SDK, and Apple MLX. He works at Samsung R&D Institute Bangladesh as a Senior Software Engineer and iOS App Developer.
+
+Q: What is the Basic_Rag_System project?
+A: Basic_Rag_System is a local Retrieval-Augmented Generation (RAG) pipeline built with LangChain in Python. It runs entirely in the terminal, combining local document ingestion, vector search, and chat-based generation without cloud API dependencies.
+
+Q: Does Shakib053 know React.js?
+A: Yes. He has built multiple React.js projects including a tourism booking site, healthcare website, online learning platform, and apartment selling site — all using the full MERN stack (MongoDB, Express, React, Node.js).
+
+Q: What is the Salah app?
+A: Salah is an open-source, non-profit iOS application for Islamic prayer timings and tracking, built with SwiftUI and Combine. It was Shakib's personal pet project and is open to community contributions.
+
+Q: What is SwiftData and did Shakib use it?
+A: SwiftData is Apple's new data persistence framework (replacement for CoreData) that integrates with iCloud. Shakib used it in the ToDoManager-iOS project to persist and sync to-do items across app sessions.
+
+Q: How many Codeforces problems has Shakib053 solved?
+A: The Codeforces-Codes repository has 348 commits and hundreds of individual C++ solution files spanning multiple Codeforces rounds and difficulty levels (A through F).
+
+Q: Has Shakib053 worked with Firebase?
+A: Yes. He has used Firebase in multiple projects: FlashChat (iOS messaging with Firebase backend), SampleAppForFirebaseAuthentication (iOS Firebase Auth demo), react-tourism-website-client (Firebase hosting and Google OAuth), simple-firebase-authentication (web Firebase Auth demo), and react-healthcare-website (Firebase hosting).
+
+Q: What is the CachedAsyncImage-SwiftUI project?
+A: It is a reusable SwiftUI library that adds caching capability to the native AsyncImage view, reducing redundant network requests when loading remote images in SwiftUI apps.
+
+Q: Does Shakib053 have experience with machine learning on Apple devices?
+A: Yes. The MLX-SwiftUI repository demonstrates integration of Apple's MLX machine learning framework (optimized for Apple Silicon) with SwiftUI for on-device inference.
+
+Q: What full-stack technologies does Shakib053 know?
+A: He knows MongoDB, Express.js, React.js, Node.js (MERN stack), Firebase (Auth + Hosting + Firestore), Google OAuth, Heroku, Netlify, and environment variable security practices.
+
+Q: Where does Shakib053 work?
+A: Kazi Tanjim Shakib works at Samsung R&D Institute Bangladesh Ltd. in Dhaka, Bangladesh as a Senior Software Engineer.
+
+================================================================================
+END OF KNOWLEDGE BASE DOCUMENT
+================================================================================
+Total Repositories Documented: 33
+Document Purpose: RAG Knowledge Base for querying Shakib053's GitHub portfolio
+Recommended Chunk Strategy: Split by REPOSITORY sections (Section 2) for embedding
+================================================================================
