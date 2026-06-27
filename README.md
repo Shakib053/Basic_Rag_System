@@ -7,6 +7,7 @@ The application runs entirely in the terminal, making it easy to ingest data and
 The stack is intentionally simple and fully local:
 
 - **ChromaDB** for vector storage
+- **BM25** for keyword retrieval
 - **Hugging Face embeddings** for text representation
 - **Ollama** with a locally downloaded model for response generation
 
@@ -15,14 +16,17 @@ The stack is intentionally simple and fully local:
 The workflow is split into two scripts:
 
 1. `ingestion.py`
-   - Reads the source text from `data/personal_info.txt`
-   - Splits the document into smaller chunks
+   - Reads every `.txt` file in `data/`
+   - Splits the documents into smaller chunks
    - Generates embeddings with `sentence-transformers/all-MiniLM-L6-v2`
    - Stores the embedded chunks in a local ChromaDB collection at `./chroma_db`
+   - Builds and saves a local BM25 keyword index at `./bm25_corpus.json`
 
 2. `chat.py`
    - Loads the saved ChromaDB vector store
+   - Loads the saved BM25 corpus
    - Uses the same Hugging Face embedding model for retrieval
+   - Runs hybrid retrieval with semantic search plus BM25 keyword search
    - Calls an Ollama model to generate responses
    - You can use any model available on the Ollama website by downloading it with `ollama pull <model-name>` and updating the model name in `chat.py`
    - Keeps a lightweight chat history so follow-up questions remain context-aware
@@ -41,9 +45,12 @@ The workflow is split into two scripts:
 ```text
 .
 ├── chat.py
+├── hybrid_retrieval.py
 ├── ingestion.py
 ├── data/
-│   └── personal_info.txt
+│   ├── Personal_info.txt
+│   ├── Projects.txt
+│   └── Travel_history.txt
 └── chroma_db/              # Created after ingestion
 ```
 
@@ -101,7 +108,8 @@ Run the ingestion script to chunk the source text and create the ChromaDB index:
 python ingestion.py
 ```
 
-This will read from `data/personal_info.txt` and create the local vector store in `./chroma_db`.
+This will read from every `.txt` file in `data/` and create the local vector store in `./chroma_db`.
+It also builds the BM25 keyword corpus from the same chunks.
 
 ### 2) Start the chat loop
 
@@ -121,11 +129,10 @@ exit
 
 - The assistant only answers from the retrieved context. If the answer is not present in the source text, it will respond with a limited answer such as “I don’t know.”
 - The project is designed for local experimentation and learning, not production deployment.
-- If you change the source text in `data/personal_info.txt`, rerun `python ingestion.py` so the ChromaDB store stays in sync.
+- If you change any file in `data/`, rerun `python ingestion.py` so both the ChromaDB store and the BM25 corpus stay in sync.
 
 ## Future Plan
 
-- Hybrid retrieval
 - Re-ranking
 - Offline evaluation set
 - RAGAS evaluation

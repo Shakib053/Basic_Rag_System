@@ -1,10 +1,15 @@
+from pathlib import Path
+
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings, HuggingFaceEndpoint, ChatHuggingFace
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.documents import Document
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
 import os
+
+from hybrid_retrieval import BM25Index, build_bm25_from_documents, reciprocal_rank_fusion
 
 load_dotenv()                                                      
 os.environ["HUGGINGFACE_HUB_TOKEN"] = os.getenv("HF_TOKEN")
@@ -16,11 +21,23 @@ embedding_model = HuggingFaceEmbeddings(
 )
 
 # 2. Load vector DB
+bm25_path = Path("./bm25_corpus.json")
+
 vectorstore = Chroma(
     persist_directory="./chroma_db",
     embedding_function=embedding_model
 )
-retriever = vectorstore.as_retriever(search_kwargs={"k": 2})
+vector_retriever = vectorstore.as_retriever(search_kwargs={"k": 4})
+
+if bm25_path.exists():
+    bm25_index = BM25Index.load(bm25_path)
+else:
+    stored = vectorstore.get()
+    documents = []
+    for page_content, metadata in zip(stored.get("documents", []), stored.get("metadatas", [])):
+        documents.append(Document(page_content=page_content, metadata=metadata or {}))
+    bm25_index = build_bm25_from_documents(documents)
+    bm25_index.save(bm25_path)
 
 # llm = ChatOllama(model="qwen3:1.7b", temperature=0) runs locally on own mac
 
@@ -64,6 +81,12 @@ Context:
 def format_docs(docs):
     return "\n\n".join(doc.page_content for doc in docs)
 
+
+def get_hybrid_docs(query):
+    semantic_docs = vector_retriever.invoke(query)
+    keyword_docs = [item.document for item in bm25_index.search(query, top_k=4)]
+    return reciprocal_rank_fusion([semantic_docs, keyword_docs])
+
 # 6. RAG chain with history-aware retrieval
 def get_rag_response(question, chat_history):
     if chat_history:
@@ -89,7 +112,7 @@ def get_rag_response(question, chat_history):
 
     print("RAG retrieval query:", standalone)
 
-    docs = retriever.invoke(standalone)
+    docs = get_hybrid_docs(standalone)
     context = format_docs(docs)
 
     rag_chain = prompt | llm
