@@ -1,16 +1,17 @@
 # Local RAG Pipeline with LangChain
 
-This repository showcases a lightweight, local Retrieval-Augmented Generation (RAG) workflow built with [LangChain](https://www.langchain.com/). It combines local document ingestion, vector search, and chat-based generation without requiring a server API or cloud-hosted inference.
+This repository showcases a lightweight Retrieval-Augmented Generation (RAG) workflow built with [LangChain](https://www.langchain.com/). It combines local document ingestion, local retrieval, reranking, and chat-based generation through the Hugging Face router.
 
 The application runs entirely in the terminal, making it easy to ingest data and ask questions from a simple command-line interface. It is designed as a local RAG demo for anyone who wants to explore the LangChain workflow without building a web app or backend service.
 
-The stack is intentionally simple and fully local:
+The stack is intentionally simple:
 
 - **ChromaDB** for vector storage
 - **BM25Retriever** for keyword retrieval
 - **Hugging Face embeddings** for text representation
+- **CrossEncoder reranking** for improving the final retrieved documents
 - **LangChain ensemble retrieval** for combining semantic and keyword results
-- **Ollama** with a locally downloaded model for response generation
+- **Hugging Face router** for response generation
 
 ## How It Works
 
@@ -20,7 +21,7 @@ The workflow is split into two scripts:
    - Reads every `.txt` file in `data/`
    - Splits the documents into smaller chunks
    - Generates embeddings with `sentence-transformers/all-MiniLM-L6-v2`
-   - Stores the embedded chunks in a local ChromaDB collection at `./chroma_db`
+   - Rebuilds the local ChromaDB collection at `./chroma_db`
 
 2. `chat.py`
    - Loads the saved ChromaDB vector store
@@ -28,8 +29,9 @@ The workflow is split into two scripts:
    - Builds a BM25Retriever directly from the stored Chroma documents
    - Runs hybrid retrieval with LangChain's weighted ensemble retriever
    - Combines semantic search from Chroma with keyword search from BM25Retriever
-   - Calls an Ollama model to generate responses
-   - You can use any model available on the Ollama website by downloading it with `ollama pull <model-name>` and updating the model name in `chat.py`
+   - Reranks the retrieved candidate chunks with `cross-encoder/ms-marco-MiniLM-L-6-v2`
+   - Prints the final retrieved chunks before generating the answer
+   - Calls a Hugging Face router chat model to generate responses
    - Keeps a lightweight chat history so follow-up questions remain context-aware
 
 ## Tech Stack
@@ -38,8 +40,7 @@ The workflow is split into two scripts:
 - LangChain
 - ChromaDB
 - Hugging Face sentence-transformers
-- Ollama
-- Any Ollama-compatible model you choose
+- Hugging Face router-compatible chat model
 
 ## Project Structure
 
@@ -61,15 +62,18 @@ Make sure the following tools are installed on your machine:
 
 - Python 3.10 or newer
 - Git
-- Ollama
 
-You also need the Ollama model used by the chat script:
+You also need a Hugging Face token in a local `.env` file:
 
-```bash
-ollama run <model-name>
+```text
+HF_TOKEN=your_hugging_face_token_here
 ```
 
-You can browse available models on the Ollama website and use any one that fits your needs. Just make sure the model name in `chat.py` matches the one you pulled locally.
+The current chat model is configured in `chat.py`:
+
+```python
+model="Qwen/Qwen2.5-72B-Instruct"
+```
 
 ## Setup
 
@@ -96,7 +100,7 @@ venv\Scripts\activate
 Install the required Python packages:
 
 ```bash
-pip install langchain langchain-chroma langchain-huggingface langchain-ollama langchain-text-splitters python-dotenv chromadb
+pip install langchain langchain-classic langchain-community langchain-chroma langchain-huggingface langchain-openai langchain-text-splitters python-dotenv chromadb sentence-transformers
 ```
 
 ## Usage
@@ -110,7 +114,7 @@ python ingestion.py
 ```
 
 This will read from every `.txt` file in `data/` and create the local vector store in `./chroma_db`.
-It also builds the BM25 keyword corpus from the same chunks.
+Each run rebuilds the vector store from scratch so old chunks do not stay mixed with new chunks.
 
 ### 2) Start the chat loop
 
@@ -126,16 +130,21 @@ Type your questions in the terminal. To exit, enter:
 exit
 ```
 
+For every question, the app prints:
+
+1. The actual retrieval query
+2. The retrieved documents used as context
+3. The final AI answer
+
 ## Notes
 
 - The assistant only answers from the retrieved context. If the answer is not present in the source text, it will respond with a limited answer such as “I don’t know.”
 - The project is designed for local experimentation and learning, not production deployment.
-- The retriever uses LangChain's built-in ensemble weighting instead of a custom reranking function.
+- The retriever first uses LangChain's ensemble weighting, then applies a small cross-encoder reranker.
 - If you change any file in `data/`, rerun `python ingestion.py` so the ChromaDB store stays in sync.
 
 ## Future Plan
 
-- Re-ranking
 - Offline evaluation set
 - RAGAS evaluation
 - Pipeline and build validation

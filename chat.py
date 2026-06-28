@@ -5,10 +5,12 @@ from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
-from hybrid_retrieval import build_hybrid_retriever
+from hybrid_retrieval import build_hybrid_retriever, rerank_documents
 
 load_dotenv()
 HF_TOKEN = os.getenv("HF_TOKEN")
+SHOW_RETRIEVED_DOCS = True
+FINAL_CONTEXT_DOCS = 5
 
 if HF_TOKEN:
     os.environ["HUGGINGFACE_HUB_TOKEN"] = HF_TOKEN
@@ -44,6 +46,30 @@ Context:
 def format_docs(docs):
     return "\n\n".join(doc.page_content for doc in docs)
 
+def print_retrieved_docs(docs):
+    if not SHOW_RETRIEVED_DOCS:
+        return
+
+    print("\nRetrieved documents used for this answer:")
+    for index, doc in enumerate(docs, start=1):
+        file_name = doc.metadata.get("file_name", "unknown file")
+        chunk_index = doc.metadata.get("chunk_index", "unknown chunk")
+        rerank_score = doc.metadata.get("rerank_score")
+        
+        preview = " ".join(doc.page_content.split())
+
+        if len(preview) > 300:
+            preview = preview[:300] + "..."
+
+        score_text = ""
+        if rerank_score is not None:
+            score_text = f" | rerank score: {rerank_score:.4f}"
+
+        print(f"{index}. {file_name} | chunk {chunk_index}{score_text}")
+        print(f"   {preview}")
+    
+    print()
+
 hybrid_retriever = build_hybrid_retriever(vectorstore)
 
 def get_hybrid_docs(query):
@@ -73,7 +99,9 @@ def get_rag_response(question, chat_history):
 
     print("RAG retrieval query:", standalone)
 
-    docs = get_hybrid_docs(standalone)
+    candidate_docs = get_hybrid_docs(standalone)
+    docs = rerank_documents(standalone, candidate_docs, top_k = FINAL_CONTEXT_DOCS)
+    print_retrieved_docs(docs)
     context = format_docs(docs)
 
     rag_chain = prompt | llm
