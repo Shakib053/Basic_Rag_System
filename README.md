@@ -7,8 +7,9 @@ The application runs entirely in the terminal, making it easy to ingest data and
 The stack is intentionally simple and fully local:
 
 - **ChromaDB** for vector storage
-- **BM25** for keyword retrieval
+- **BM25Retriever** for keyword retrieval
 - **Hugging Face embeddings** for text representation
+- **LangChain ensemble retrieval** for combining semantic and keyword results
 - **Ollama** with a locally downloaded model for response generation
 
 ## How It Works
@@ -20,13 +21,13 @@ The workflow is split into two scripts:
    - Splits the documents into smaller chunks
    - Generates embeddings with `sentence-transformers/all-MiniLM-L6-v2`
    - Stores the embedded chunks in a local ChromaDB collection at `./chroma_db`
-   - Builds and saves a local BM25 keyword index at `./bm25_corpus.json`
 
 2. `chat.py`
    - Loads the saved ChromaDB vector store
-   - Loads the saved BM25 corpus
    - Uses the same Hugging Face embedding model for retrieval
-   - Runs hybrid retrieval with semantic search plus BM25 keyword search
+   - Builds a BM25Retriever directly from the stored Chroma documents
+   - Runs hybrid retrieval with LangChain's weighted ensemble retriever
+   - Combines semantic search from Chroma with keyword search from BM25Retriever
    - Calls an Ollama model to generate responses
    - You can use any model available on the Ollama website by downloading it with `ollama pull <model-name>` and updating the model name in `chat.py`
    - Keeps a lightweight chat history so follow-up questions remain context-aware
@@ -129,7 +130,8 @@ exit
 
 - The assistant only answers from the retrieved context. If the answer is not present in the source text, it will respond with a limited answer such as “I don’t know.”
 - The project is designed for local experimentation and learning, not production deployment.
-- If you change any file in `data/`, rerun `python ingestion.py` so both the ChromaDB store and the BM25 corpus stay in sync.
+- The retriever uses LangChain's built-in ensemble weighting instead of a custom reranking function.
+- If you change any file in `data/`, rerun `python ingestion.py` so the ChromaDB store stays in sync.
 
 ## Future Plan
 

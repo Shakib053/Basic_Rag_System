@@ -1,17 +1,13 @@
-from pathlib import Path
-
 from dotenv import load_dotenv
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-
-from hybrid_retrieval import build_bm25_from_documents, load_txt_documents, split_documents_with_ids
+from pathlib import Path
+from hybrid_retrieval import load_txt_documents, split_documents_with_ids
 
 load_dotenv()
 
 data_dir = Path("data")
-bm25_path = Path("./bm25_corpus.json")
-
 splitter = RecursiveCharacterTextSplitter(
     chunk_size=300,
     chunk_overlap=50
@@ -33,14 +29,11 @@ embedding_model = HuggingFaceEmbeddings(
 vector_store = Chroma.from_documents(
     documents=chunks,
     embedding=embedding_model,
-    persist_directory="./chroma_db"
+    persist_directory="./chroma_db",
+    ids=[doc.metadata["chunk_id"] for doc in chunks]
 )
 
-bm25_index = build_bm25_from_documents(chunks)
-bm25_index.save(bm25_path)
-
 print("Data stored in ChromaDB")
-print(f"BM25 corpus stored in {bm25_path}")
 
 data = vector_store.get()
 print(data)
