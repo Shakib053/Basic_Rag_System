@@ -18,7 +18,7 @@ The stack is intentionally simple:
 The workflow is split into two scripts:
 
 1. `ingestion.py`
-   - Reads every `.txt` file in `data/`
+   - Reads every `.txt` and text-based `.pdf` file in `data/`
    - Splits the documents into smaller chunks
    - Generates embeddings with `sentence-transformers/all-MiniLM-L6-v2`
    - Rebuilds the local ChromaDB collection at `./chroma_db`
@@ -52,7 +52,8 @@ The workflow is split into two scripts:
 ├── data/
 │   ├── Personal_info.txt
 │   ├── Projects.txt
-│   └── Travel_history.txt
+│   ├── Travel_history.txt
+│   └── Example.pdf
 └── chroma_db/              # Created after ingestion
 ```
 
@@ -100,7 +101,7 @@ venv\Scripts\activate
 Install the required Python packages:
 
 ```bash
-pip install langchain langchain-classic langchain-community langchain-chroma langchain-huggingface langchain-openai langchain-text-splitters python-dotenv chromadb sentence-transformers
+pip install langchain langchain-classic langchain-community langchain-chroma langchain-huggingface langchain-openai langchain-text-splitters python-dotenv chromadb sentence-transformers pypdf
 ```
 
 ## Usage
@@ -113,8 +114,14 @@ Run the ingestion script to chunk the source text and create the ChromaDB index:
 python ingestion.py
 ```
 
-This will read from every `.txt` file in `data/` and create the local vector store in `./chroma_db`.
+This will read every `.txt` file and text-based `.pdf` file directly inside `data/`, then create the local vector store in `./chroma_db`.
 Each run rebuilds the vector store from scratch so old chunks do not stay mixed with new chunks.
+
+PDFs must contain selectable text. Scanned or image-only PDFs are not OCR processed and will be skipped with a warning when they contain no extractable text. Unreadable, corrupt, or encrypted PDFs are also skipped without preventing other valid documents from being indexed.
+
+Ingestion builds the new index in a staging directory and replaces the existing
+`chroma_db` only after the build succeeds. If indexing fails, the previous vector
+store remains available.
 
 ### 2) Start the chat loop
 
@@ -142,6 +149,18 @@ For every question, the app prints:
 - The project is designed for local experimentation and learning, not production deployment.
 - The retriever first uses LangChain's ensemble weighting, then applies a small cross-encoder reranker.
 - If you change any file in `data/`, rerun `python ingestion.py` so the ChromaDB store stays in sync.
+- Retrieved PDF chunks include their source filename and page number in terminal output.
+
+### Chroma native binding error
+
+If ingestion reports that `chromadb_rust_bindings.chromadb_rust_bindings` is
+missing, reinstall Chroma from its binary wheel inside the active virtual
+environment:
+
+```bash
+python -m pip install --force-reinstall --no-cache-dir --no-deps --only-binary=:all: chromadb==1.5.9
+python -c "import chromadb_rust_bindings.chromadb_rust_bindings; print('Chroma native bindings loaded')"
+```
 
 ## Future Plan
 
