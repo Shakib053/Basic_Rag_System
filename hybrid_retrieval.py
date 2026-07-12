@@ -3,40 +3,90 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 from typing import Sequence
+import warnings
 
 from langchain_chroma import Chroma
+from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
 from langchain_classic.retrievers import EnsembleRetriever
 from sentence_transformers import CrossEncoder
 
 RERANKER_MODEL_NAME = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+SUPPORTED_FILE_TYPES = {".txt", ".pdf"}
 
-def load_txt_documents(data_dir: str | Path) -> list[Document]:
+def load_documents(data_dir: str | Path) -> list[Document]:
     data_path = Path(data_dir)
     documents: list[Document] = []
 
-    for file_path in sorted(data_path.glob("*.txt")):
-        text = file_path.read_text(encoding="utf-8")
-        documents.append(
-            Document(
-                page_content=text,
-                metadata={
+    supported_files = sorted(
+        (path for path in data_path.iterdir() if path.is_file() and path.suffix.lower() in SUPPORTED_FILE_TYPES),
+        key=lambda path: path.name.lower(),
+    )
+
+    for file_path in supported_files:
+        file_type = file_path.suffix.lower().lstrip(".")
+
+        if file_type == "txt":
+            text = file_path.read_text(encoding="utf-8")
+            if text.strip():
+                documents.append(
+                    Document(
+                        page_content=text,
+                        metadata={
+                            "source": str(file_path),
+                            "file_name": file_path.name,
+                            "file_type": file_type,
+                        },
+                    )
+                )
+            continue
+
+        try:
+            pdf_pages = PyPDFLoader(str(file_path)).load()
+        except Exception as exc:
+            warnings.warn(
+                f"Skipping unreadable PDF '{file_path}': {exc}",
+                stacklevel=2,
+            )
+            continue
+
+        readable_pages = 0
+        for page in pdf_pages:
+            if not page.page_content.strip():
+                continue
+
+            page.metadata.update(
+                {
                     "source": str(file_path),
                     "file_name": file_path.name,
-                },
+                    "file_type": file_type,
+                }
             )
-        )
+            documents.append(page)
+            readable_pages += 1
+
+        if readable_pages == 0:
+            warnings.warn(
+                f"Skipping PDF with no extractable text: '{file_path}'",
+                stacklevel=2,
+            )
 
     return documents
 
 def split_documents_with_ids(documents: Sequence[Document], splitter) -> list[Document]:
-    chunks = splitter.split_documents(list(documents))
+    chunks: list[Document] = []
 
-    for index, chunk in enumerate(chunks):
-        source = chunk.metadata.get("source", "unknown")
-        chunk.metadata["chunk_index"] = index
-        chunk.metadata["chunk_id"] = f"{source}::chunk-{index}"
+    for document in documents:
+        document_chunks = splitter.split_documents([document])
+        source = document.metadata.get("source", "unknown")
+        page = document.metadata.get("page")
+        location = f"{source}::page-{page}" if page is not None else source
+
+        for index, chunk in enumerate(document_chunks):
+            chunk.metadata["chunk_index"] = index
+            chunk.metadata["chunk_id"] = f"{location}::chunk-{index}"
+            chunks.append(chunk)
 
     return chunks
 
@@ -46,6 +96,7 @@ def _build_bm25_retriever_from_vectorstore(vectorstore: Chroma, *, k: int) -> BM
         Document(page_content=text, metadata=meta or {})
         for text, meta in zip(stored.get("documents", []), stored.get("metadatas", []))
     ]
+
     bm25_retriever = BM25Retriever.from_documents(documents)
     bm25_retriever.k = k
     return bm25_retriever

@@ -54,6 +54,7 @@ def print_retrieved_docs(docs):
     for index, doc in enumerate(docs, start=1):
         file_name = doc.metadata.get("file_name", "unknown file")
         chunk_index = doc.metadata.get("chunk_index", "unknown chunk")
+        page = doc.metadata.get("page")
         rerank_score = doc.metadata.get("rerank_score")
         
         preview = " ".join(doc.page_content.split())
@@ -65,7 +66,8 @@ def print_retrieved_docs(docs):
         if rerank_score is not None:
             score_text = f" | rerank score: {rerank_score:.4f}"
 
-        print(f"{index}. {file_name} | chunk {chunk_index}{score_text}")
+        page_text = f" | page {page + 1}" if isinstance(page, int) else ""
+        print(f"{index}. {file_name}{page_text} | chunk {chunk_index}{score_text}")
         print(f"   {preview}")
     
     print()
