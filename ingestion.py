@@ -11,14 +11,11 @@ from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-
 from hybrid_retrieval import load_documents, split_documents_with_ids
-
 
 DATA_DIR = Path("data")
 PERSIST_DIR = Path("chroma_db")
 EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
-
 
 def verify_chroma_native_bindings() -> None:
     try:

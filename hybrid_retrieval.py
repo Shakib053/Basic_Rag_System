@@ -13,9 +13,7 @@ from langchain_classic.retrievers import EnsembleRetriever
 from sentence_transformers import CrossEncoder
 
 RERANKER_MODEL_NAME = "cross-encoder/ms-marco-MiniLM-L-6-v2"
-
 SUPPORTED_FILE_TYPES = {".txt", ".pdf"}
-
 
 def load_documents(data_dir: str | Path) -> list[Document]:
     data_path = Path(data_dir)
@@ -76,7 +74,6 @@ def load_documents(data_dir: str | Path) -> list[Document]:
 
     return documents
 
-
 def split_documents_with_ids(documents: Sequence[Document], splitter) -> list[Document]:
     chunks: list[Document] = []
 
@@ -99,6 +96,7 @@ def _build_bm25_retriever_from_vectorstore(vectorstore: Chroma, *, k: int) -> BM
         Document(page_content=text, metadata=meta or {})
         for text, meta in zip(stored.get("documents", []), stored.get("metadatas", []))
     ]
+
     bm25_retriever = BM25Retriever.from_documents(documents)
     bm25_retriever.k = k
     return bm25_retriever
