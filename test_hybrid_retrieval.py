@@ -67,6 +67,68 @@ class DocumentLoadingTests(unittest.TestCase):
         self.assertTrue(ids[0].startswith("data/a.pdf::page-0::chunk-"))
         self.assertTrue(ids[-1].startswith("data/a.pdf::page-1::chunk-"))
 
+    def test_chunk_metadata_is_preserved_and_strategy_is_recorded(self):
+        documents = [
+            Document(
+                page_content="A complete sentence about one topic.",
+                metadata={
+                    "source": "data/guide.pdf",
+                    "file_name": "guide.pdf",
+                    "file_type": "pdf",
+                    "page": 2,
+                },
+            )
+        ]
+        splitter = RecursiveCharacterTextSplitter(chunk_size=100, chunk_overlap=0)
+
+        chunks = split_documents_with_ids(
+            documents,
+            splitter,
+            chunking_strategy="semantic",
+        )
+
+        self.assertEqual(len(chunks), 1)
+        self.assertEqual(chunks[0].metadata["source"], "data/guide.pdf")
+        self.assertEqual(chunks[0].metadata["file_name"], "guide.pdf")
+        self.assertEqual(chunks[0].metadata["file_type"], "pdf")
+        self.assertEqual(chunks[0].metadata["page"], 2)
+        self.assertEqual(chunks[0].metadata["chunk_index"], 0)
+        self.assertEqual(chunks[0].metadata["chunking_strategy"], "semantic")
+
+    def test_semantic_splitter_topic_boundaries_become_separate_chunks(self):
+        class DeterministicSemanticSplitter:
+            def split_documents(self, documents):
+                source = documents[0]
+                return [
+                    Document(page_content=text.strip(), metadata=dict(source.metadata))
+                    for text in source.page_content.split("<topic-change>")
+                ]
+
+        documents = [
+            Document(
+                page_content=(
+                    "Python is used for the backend."
+                    "<topic-change>Dhaka was the destination of the trip."
+                ),
+                metadata={"source": "data/profile.txt"},
+            )
+        ]
+
+        chunks = split_documents_with_ids(
+            documents,
+            DeterministicSemanticSplitter(),
+            chunking_strategy="semantic",
+        )
+
+        self.assertEqual(
+            [chunk.page_content for chunk in chunks],
+            [
+                "Python is used for the backend.",
+                "Dhaka was the destination of the trip.",
+            ],
+        )
+        self.assertEqual([chunk.metadata["chunk_index"] for chunk in chunks], [0, 1])
+
 
 if __name__ == "__main__":
     unittest.main()

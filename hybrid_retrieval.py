@@ -74,7 +74,12 @@ def load_documents(data_dir: str | Path) -> list[Document]:
 
     return documents
 
-def split_documents_with_ids(documents: Sequence[Document], splitter) -> list[Document]:
+def split_documents_with_ids(
+    documents: Sequence[Document],
+    splitter,
+    *,
+    chunking_strategy: str | None = None,
+) -> list[Document]:
     chunks: list[Document] = []
 
     for document in documents:
@@ -86,6 +91,8 @@ def split_documents_with_ids(documents: Sequence[Document], splitter) -> list[Do
         for index, chunk in enumerate(document_chunks):
             chunk.metadata["chunk_index"] = index
             chunk.metadata["chunk_id"] = f"{location}::chunk-{index}"
+            if chunking_strategy is not None:
+                chunk.metadata["chunking_strategy"] = chunking_strategy
             chunks.append(chunk)
 
     return chunks

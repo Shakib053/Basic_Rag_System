@@ -1,9 +1,45 @@
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
-from ingestion import rebuild_vector_store, replace_vector_store
+from ingestion import (
+    build_chunker,
+    get_chunking_strategy,
+    rebuild_vector_store,
+    replace_vector_store,
+)
+
+
+class ChunkerConfigurationTests(unittest.TestCase):
+    @patch.dict("ingestion.os.environ", {}, clear=True)
+    def test_semantic_chunking_is_default(self):
+        self.assertEqual(get_chunking_strategy(), "semantic")
+
+    def test_recursive_chunker_keeps_existing_settings(self):
+        splitter = build_chunker("recursive", Mock())
+
+        self.assertEqual(splitter._chunk_size, 700)
+        self.assertEqual(splitter._chunk_overlap, 100)
+
+    def test_invalid_chunking_strategy_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "Unsupported CHUNKING_STRATEGY"):
+            get_chunking_strategy("fixed")
+
+    @patch("ingestion._load_semantic_chunker_class")
+    def test_semantic_chunker_uses_expected_configuration(self, loader):
+        semantic_chunker = Mock()
+        loader.return_value = semantic_chunker
+        embeddings = Mock()
+
+        build_chunker("semantic", embeddings)
+
+        semantic_chunker.assert_called_once_with(
+            embeddings=embeddings,
+            breakpoint_threshold_type="percentile",
+            breakpoint_threshold_amount=95,
+            min_chunk_size=200,
+        )
 
 
 class FailureSafeIngestionTests(unittest.TestCase):
