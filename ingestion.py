@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import gc
+import os
 import shutil
 from pathlib import Path
 from typing import Callable, Sequence
@@ -16,6 +17,56 @@ from hybrid_retrieval import load_documents, split_documents_with_ids
 DATA_DIR = Path("data")
 PERSIST_DIR = Path("chroma_db")
 EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
+DEFAULT_CHUNKING_STRATEGY = "semantic"
+SUPPORTED_CHUNKING_STRATEGIES = {"semantic", "recursive"}
+SEMANTIC_BREAKPOINT_PERCENTILE = 95
+SEMANTIC_MIN_CHUNK_SIZE = 200
+RECURSIVE_CHUNK_SIZE = 700
+RECURSIVE_CHUNK_OVERLAP = 100
+
+
+def get_chunking_strategy(value: str | None = None) -> str:
+    strategy = (
+        value
+        if value is not None
+        else os.getenv("CHUNKING_STRATEGY", DEFAULT_CHUNKING_STRATEGY)
+    )
+    strategy = strategy.strip().lower()
+    if strategy not in SUPPORTED_CHUNKING_STRATEGIES:
+        choices = ", ".join(sorted(SUPPORTED_CHUNKING_STRATEGIES))
+        raise ValueError(
+            f"Unsupported CHUNKING_STRATEGY '{strategy}'. Expected one of: {choices}."
+        )
+    return strategy
+
+
+def _load_semantic_chunker_class():
+    try:
+        from langchain_experimental.text_splitter import SemanticChunker
+    except ImportError as exc:
+        raise RuntimeError(
+            "Semantic chunking requires langchain-experimental. Install it with: "
+            "python -m pip install langchain-experimental"
+        ) from exc
+    return SemanticChunker
+
+
+def build_chunker(strategy: str, embedding_model: HuggingFaceEmbeddings):
+    strategy = get_chunking_strategy(strategy)
+    if strategy == "recursive":
+        return RecursiveCharacterTextSplitter(
+            chunk_size=RECURSIVE_CHUNK_SIZE,
+            chunk_overlap=RECURSIVE_CHUNK_OVERLAP,
+        )
+
+    semantic_chunker = _load_semantic_chunker_class()
+    return semantic_chunker(
+        embeddings=embedding_model,
+        breakpoint_threshold_type="percentile",
+        breakpoint_threshold_amount=SEMANTIC_BREAKPOINT_PERCENTILE,
+        min_chunk_size=SEMANTIC_MIN_CHUNK_SIZE,
+    )
+
 
 def verify_chroma_native_bindings() -> None:
     try:
@@ -91,21 +142,23 @@ def main() -> None:
     load_dotenv()
     verify_chroma_native_bindings()
 
-    splitter = RecursiveCharacterTextSplitter(
-        chunk_size=700,
-        chunk_overlap=100,
-    )
+    strategy = get_chunking_strategy()
     source_documents = load_documents(DATA_DIR)
     if not source_documents:
         raise RuntimeError(
             f"No usable .txt or .pdf documents found in {DATA_DIR.resolve()}"
         )
 
-    chunks = split_documents_with_ids(source_documents, splitter)
-    print(f"Loaded {len(source_documents)} source documents")
-    print(f"Created {len(chunks)} chunks")
-
     embedding_model = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL_NAME)
+    splitter = build_chunker(strategy, embedding_model)
+    chunks = split_documents_with_ids(
+        source_documents,
+        splitter,
+        chunking_strategy=strategy,
+    )
+    print(f"Loaded {len(source_documents)} source documents")
+    print(f"Created {len(chunks)} chunks using {strategy} chunking")
+
     rebuild_vector_store(chunks, embedding_model, PERSIST_DIR)
     print(f"Data stored in ChromaDB at {PERSIST_DIR}")
 
