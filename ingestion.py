@@ -11,19 +11,19 @@ from dotenv import load_dotenv
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from hybrid_retrieval import load_documents, split_documents_with_ids
+from recursive_chunking import RECURSIVE_STRATEGY, build_recursive_chunker
 
 DATA_DIR = Path("data")
 PERSIST_DIR = Path("chroma_db")
 EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 DEFAULT_CHUNKING_STRATEGY = "semantic"
-SUPPORTED_CHUNKING_STRATEGIES = {"semantic", "recursive"}
+SUPPORTED_CHUNKING_STRATEGIES = {
+    DEFAULT_CHUNKING_STRATEGY,
+    RECURSIVE_STRATEGY
+}
 SEMANTIC_BREAKPOINT_PERCENTILE = 95
 SEMANTIC_MIN_CHUNK_SIZE = 200
-RECURSIVE_CHUNK_SIZE = 700
-RECURSIVE_CHUNK_OVERLAP = 100
-
 
 def get_chunking_strategy(value: str | None = None) -> str:
     strategy = (
@@ -39,7 +39,6 @@ def get_chunking_strategy(value: str | None = None) -> str:
         )
     return strategy
 
-
 def _load_semantic_chunker_class():
     try:
         from langchain_experimental.text_splitter import SemanticChunker
@@ -50,14 +49,10 @@ def _load_semantic_chunker_class():
         ) from exc
     return SemanticChunker
 
-
 def build_chunker(strategy: str, embedding_model: HuggingFaceEmbeddings):
     strategy = get_chunking_strategy(strategy)
-    if strategy == "recursive":
-        return RecursiveCharacterTextSplitter(
-            chunk_size=RECURSIVE_CHUNK_SIZE,
-            chunk_overlap=RECURSIVE_CHUNK_OVERLAP,
-        )
+    if strategy == RECURSIVE_STRATEGY:
+        return build_recursive_chunker()
 
     semantic_chunker = _load_semantic_chunker_class()
     return semantic_chunker(
@@ -78,7 +73,6 @@ def verify_chroma_native_bindings() -> None:
             "--only-binary=:all: chromadb==1.5.9"
         ) from exc
 
-
 def build_vector_store(
     chunks: Sequence[Document],
     embedding_model: HuggingFaceEmbeddings,
@@ -92,7 +86,6 @@ def build_vector_store(
     )
     del vector_store
     gc.collect()
-
 
 def _rename_path(source: Path, destination: Path) -> None:
     source.rename(destination)
@@ -117,7 +110,6 @@ def replace_vector_store(staging_dir: Path, persist_dir: Path) -> None:
 
     if backup_dir.exists():
         shutil.rmtree(backup_dir)
-
 
 def rebuild_vector_store(
     chunks: Sequence[Document],

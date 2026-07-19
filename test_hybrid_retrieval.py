@@ -4,9 +4,25 @@ from pathlib import Path
 from unittest.mock import patch
 
 from langchain_core.documents import Document
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from hybrid_retrieval import load_documents, split_documents_with_ids
+
+
+class FixedLengthTestSplitter:
+    def __init__(self, chunk_size):
+        self.chunk_size = chunk_size
+
+    def split_documents(self, documents):
+        chunks = []
+        for document in documents:
+            for start in range(0, len(document.page_content), self.chunk_size):
+                chunks.append(
+                    Document(
+                        page_content=document.page_content[start : start + self.chunk_size],
+                        metadata=dict(document.metadata),
+                    )
+                )
+        return chunks
 
 
 class DocumentLoadingTests(unittest.TestCase):
@@ -58,7 +74,7 @@ class DocumentLoadingTests(unittest.TestCase):
             Document(page_content="A" * 30, metadata={"source": "data/a.pdf", "page": 0}),
             Document(page_content="B" * 30, metadata={"source": "data/a.pdf", "page": 1}),
         ]
-        splitter = RecursiveCharacterTextSplitter(chunk_size=10, chunk_overlap=0)
+        splitter = FixedLengthTestSplitter(chunk_size=10)
 
         chunks = split_documents_with_ids(documents, splitter)
         ids = [chunk.metadata["chunk_id"] for chunk in chunks]
@@ -79,7 +95,7 @@ class DocumentLoadingTests(unittest.TestCase):
                 },
             )
         ]
-        splitter = RecursiveCharacterTextSplitter(chunk_size=100, chunk_overlap=0)
+        splitter = FixedLengthTestSplitter(chunk_size=100)
 
         chunks = split_documents_with_ids(
             documents,
