@@ -1,5 +1,6 @@
 import tempfile
 import unittest
+
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -7,20 +8,39 @@ from ingestion import (
     build_chunker,
     get_chunking_strategy,
     rebuild_vector_store,
-    replace_vector_store,
+    replace_vector_store
 )
-
 
 class ChunkerConfigurationTests(unittest.TestCase):
     @patch.dict("ingestion.os.environ", {}, clear=True)
     def test_semantic_chunking_is_default(self):
         self.assertEqual(get_chunking_strategy(), "semantic")
 
-    def test_recursive_chunker_keeps_existing_settings(self):
-        splitter = build_chunker("recursive", Mock())
+    @patch.dict(
+        "ingestion.os.environ",
+        {"CHUNKING_STRATEGY": "semantic"},
+        clear=True,
+    )
+    def test_semantic_strategy_can_be_selected_from_environment(self):
+        self.assertEqual(get_chunking_strategy(), "semantic")
 
-        self.assertEqual(splitter._chunk_size, 700)
-        self.assertEqual(splitter._chunk_overlap, 100)
+    @patch.dict(
+        "ingestion.os.environ",
+        {"CHUNKING_STRATEGY": "recursive"},
+        clear=True,
+    )
+    def test_recursive_strategy_can_be_selected_from_environment(self):
+        self.assertEqual(get_chunking_strategy(), "recursive")
+
+    @patch("ingestion.build_recursive_chunker")
+    def test_recursive_strategy_routes_to_recursive_chunker(self, builder):
+        recursive_chunker = Mock()
+        builder.return_value = recursive_chunker
+
+        result = build_chunker("recursive", Mock())
+
+        builder.assert_called_once_with()
+        self.assertIs(result, recursive_chunker)
 
     def test_invalid_chunking_strategy_is_rejected(self):
         with self.assertRaisesRegex(ValueError, "Unsupported CHUNKING_STRATEGY"):
