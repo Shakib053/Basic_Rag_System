@@ -1,11 +1,15 @@
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from langchain_core.documents import Document
 
-from hybrid_retrieval import load_documents, split_documents_with_ids
+from hybrid_retrieval import (
+    build_hybrid_retriever,
+    load_documents,
+    split_documents_with_ids,
+)
 
 
 class FixedLengthTestSplitter:
@@ -23,6 +27,40 @@ class FixedLengthTestSplitter:
                     )
                 )
         return chunks
+
+
+class HybridRetrieverConfigurationTests(unittest.TestCase):
+    @patch("hybrid_retrieval.EnsembleRetriever")
+    @patch("hybrid_retrieval._build_bm25_retriever_from_vectorstore")
+    def test_builds_mmr_and_bm25_retrievers_with_expected_defaults(
+        self,
+        build_bm25_retriever,
+        ensemble_retriever,
+    ):
+        vectorstore = Mock()
+        semantic_retriever = Mock()
+        keyword_retriever = Mock()
+        expected_retriever = Mock()
+        vectorstore.as_retriever.return_value = semantic_retriever
+        build_bm25_retriever.return_value = keyword_retriever
+        ensemble_retriever.return_value = expected_retriever
+
+        result = build_hybrid_retriever(vectorstore)
+
+        vectorstore.as_retriever.assert_called_once_with(
+            search_type="mmr",
+            search_kwargs={
+                "k": 12,
+                "fetch_k": 10,
+                "lambda_mult": 0.5,
+            },
+        )
+        build_bm25_retriever.assert_called_once_with(vectorstore, k=12)
+        ensemble_retriever.assert_called_once_with(
+            retrievers=[semantic_retriever, keyword_retriever],
+            weights=[0.5, 0.5],
+        )
+        self.assertIs(result, expected_retriever)
 
 
 class DocumentLoadingTests(unittest.TestCase):

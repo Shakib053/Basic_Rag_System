@@ -116,7 +116,14 @@ def build_hybrid_retriever(
     semantic_weight: float = 0.5,
     keyword_weight: float = 0.5,
 ) -> EnsembleRetriever:
-    semantic_retriever = vectorstore.as_retriever(search_kwargs={"k": semantic_k})
+    semantic_retriever = vectorstore.as_retriever(
+        search_type="mmr",
+        search_kwargs={
+            "k": semantic_k,
+            "fetch_k": 10,
+            "lambda_mult": 0.5,
+        }
+    )
     keyword_retriever = _build_bm25_retriever_from_vectorstore(vectorstore, k=keyword_k)
     return EnsembleRetriever(
         retrievers=[semantic_retriever, keyword_retriever],
