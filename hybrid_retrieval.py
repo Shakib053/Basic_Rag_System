@@ -6,7 +6,7 @@ from typing import Sequence
 import warnings
 
 from langchain_chroma import Chroma
-from langchain_community.document_loaders import PyPDFLoader
+from langchain_community.document_loaders import PyMuPDFLoader
 from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
 from langchain_classic.retrievers import EnsembleRetriever
@@ -43,7 +43,11 @@ def load_documents(data_dir: str | Path) -> list[Document]:
             continue
 
         try:
-            pdf_pages = PyPDFLoader(str(file_path)).load()
+            pdf_pages = PyMuPDFLoader(
+                str(file_path),
+                mode="page",
+                extract_tables="markdown",
+            ).load()
         except Exception as exc:
             warnings.warn(
                 f"Skipping unreadable PDF '{file_path}': {exc}",

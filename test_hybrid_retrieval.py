@@ -76,7 +76,7 @@ class DocumentLoadingTests(unittest.TestCase):
         self.assertEqual(documents[0].metadata["file_name"], "notes.txt")
         self.assertEqual(documents[0].metadata["file_type"], "txt")
 
-    @patch("hybrid_retrieval.PyPDFLoader")
+    @patch("hybrid_retrieval.PyMuPDFLoader")
     def test_loads_only_nonempty_pdf_pages(self, loader_class):
         loader_class.return_value.load.return_value = [
             Document(page_content="First page", metadata={"page": 0}),
@@ -89,12 +89,17 @@ class DocumentLoadingTests(unittest.TestCase):
             path.touch()
             documents = load_documents(directory)
 
+        loader_class.assert_called_once_with(
+            str(path),
+            mode="page",
+            extract_tables="markdown",
+        )
         self.assertEqual([doc.metadata["page"] for doc in documents], [0, 2])
         self.assertTrue(all(doc.metadata["file_name"] == "guide.pdf" for doc in documents))
         self.assertTrue(all(doc.metadata["file_type"] == "pdf" for doc in documents))
 
     @patch("hybrid_retrieval.warnings.warn")
-    @patch("hybrid_retrieval.PyPDFLoader")
+    @patch("hybrid_retrieval.PyMuPDFLoader")
     def test_warns_and_continues_for_unreadable_pdf(self, loader_class, warn):
         loader_class.return_value.load.side_effect = ValueError("broken")
 
