@@ -1,71 +1,95 @@
-# Local RAG Pipeline with LangChain
+# Local Personal RAG Assistant
 
-This repository showcases a lightweight Retrieval-Augmented Generation (RAG) workflow built with [LangChain](https://www.langchain.com/). It combines local document ingestion, local retrieval, reranking, and chat-based generation through the Hugging Face router.
+A professional local Retrieval-Augmented Generation (RAG) pipeline for querying personal documents from the terminal. The project ingests local text and text-based PDF files, chunks them intelligently, stores embeddings in ChromaDB, retrieves relevant context with hybrid search, reranks the candidates, and generates grounded answers through a Hugging Face Router-compatible chat model.
 
-The application runs entirely in the terminal, making it easy to ingest data and ask questions from a simple command-line interface. It is designed as a local RAG demo for anyone who wants to explore the LangChain workflow without building a web app or backend service.
+This is designed as a compact but complete personal knowledge assistant: simple enough to run locally, structured enough to demonstrate the core components of a modern RAG system.
 
-The stack is intentionally simple:
+## Features
 
-- **ChromaDB** for vector storage
-- **BM25Retriever** for keyword retrieval
-- **Hugging Face embeddings** for text representation
-- **LangChain SemanticChunker** for meaning-aware document boundaries
-- **CrossEncoder reranking** for improving the final retrieved documents
-- **LangChain ensemble retrieval** for combining semantic and keyword results
-- **Hugging Face router** for response generation
+- **Document ingestion** for `.txt` files and text-extractable `.pdf` files in `data/`
+- **PDF parsing with metadata** using LangChain's PyMuPDF loader, including page-level metadata and markdown table extraction
+- **Semantic chunking by default** with LangChain `SemanticChunker`
+- **Recursive chunking fallback** through `CHUNKING_STRATEGY=recursive`
+- **Local vector storage** with ChromaDB and stable chunk IDs
+- **Hybrid retrieval** combining Chroma semantic search with BM25 keyword search
+- **MMR semantic retrieval** to improve result diversity
+- **Cross-encoder reranking** with `cross-encoder/ms-marco-MiniLM-L-6-v2`
+- **Context-grounded chat** that answers only from retrieved documents
+- **Follow-up question handling** through lightweight chat-history rewriting
+- **Terminal-first workflow** with retrieved context printed for transparency
 
-## How It Works
+## Architecture
 
-The workflow is split into two scripts:
+```text
+data/
+  -> ingestion.py
+  -> semantic or recursive chunking
+  -> Hugging Face embeddings
+  -> ChromaDB vector store
+  -> hybrid retrieval: Chroma MMR + BM25
+  -> cross-encoder reranker
+  -> Hugging Face Router chat model
+  -> grounded answer
+```
 
-1. `ingestion.py`
-   - Reads every `.txt` and text-based `.pdf` file in `data/`
-   - Splits documents at semantic topic boundaries by default
-   - Generates embeddings with `sentence-transformers/all-MiniLM-L6-v2`
-   - Rebuilds the local ChromaDB collection at `./chroma_db`
+The pipeline is split into two main stages:
 
-2. `chat.py`
-   - Loads the saved ChromaDB vector store
-   - Uses the same Hugging Face embedding model for retrieval
-   - Builds a BM25Retriever directly from the stored Chroma documents
-   - Runs hybrid retrieval with LangChain's weighted ensemble retriever
-   - Combines semantic search from Chroma with keyword search from BM25Retriever
-   - Reranks the retrieved candidate chunks with `cross-encoder/ms-marco-MiniLM-L-6-v2`
-   - Prints the final retrieved chunks before generating the answer
-   - Calls a Hugging Face router chat model to generate responses
-   - Keeps a lightweight chat history so follow-up questions remain context-aware
+1. **Ingestion**
+   - Loads supported documents from `data/`
+   - Extracts text from `.txt` and text-based `.pdf` files
+   - Preserves source metadata such as file name, file type, page, chunk index, and chunk ID
+   - Chunks documents using semantic boundaries by default
+   - Embeds chunks with `sentence-transformers/all-MiniLM-L6-v2`
+   - Rebuilds the local ChromaDB store at `./chroma_db`
+
+2. **Retrieval and chat**
+   - Loads the persisted ChromaDB store
+   - Builds a BM25 retriever from the stored Chroma documents
+   - Combines semantic and keyword retrieval with LangChain's ensemble retriever
+   - Applies cross-encoder reranking to select the strongest final context
+   - Sends only the selected context to the chat model
+   - Rewrites follow-up questions into standalone retrieval queries when chat history exists
 
 ## Tech Stack
 
 - Python
 - LangChain
 - ChromaDB
-- Hugging Face sentence-transformers
-- Hugging Face router-compatible chat model
+- Hugging Face embeddings
+- Hugging Face Router-compatible chat models
+- Sentence Transformers cross-encoder reranking
+- PyMuPDF-based PDF loading
+- BM25 keyword retrieval
 
 ## Project Structure
 
 ```text
 .
+├── README.md
 ├── chat.py
 ├── hybrid_retrieval.py
 ├── ingestion.py
-├── data/
-│   ├── Personal_info.txt
-│   ├── Projects.txt
-│   ├── Travel_history.txt
-│   └── Example.pdf
-└── chroma_db/              # Created after ingestion
+├── recursive_chunking.py
+├── test_hybrid_retrieval.py
+├── test_ingestion.py
+├── test_recursive_chunking.py
+├── bm25_corpus.json
+├── chroma_db/              # Created or rebuilt by ingestion
+└── data/
+    ├── Kazi_Tanjim_Shakib_Professional_Profile.pdf
+    ├── Personal_info.txt
+    ├── Projects.txt
+    ├── Travel_history.txt
+    └── multimodal_rag_sample_data.pdf
 ```
 
 ## Prerequisites
 
-Make sure the following tools are installed on your machine:
-
 - Python 3.10 or newer
 - Git
+- A Hugging Face access token
 
-You also need a Hugging Face token in a local `.env` file:
+Create a local `.env` file in the project root:
 
 ```text
 HF_TOKEN=your_hugging_face_token_here
@@ -79,7 +103,7 @@ model="Qwen/Qwen2.5-72B-Instruct"
 
 ## Setup
 
-Clone the repository from GitHub:
+Clone the repository:
 
 ```bash
 git clone <your-repo-url>
@@ -93,97 +117,133 @@ python -m venv venv
 source venv/bin/activate
 ```
 
-On Windows, activate it with:
+On Windows:
 
 ```bash
 venv\Scripts\activate
 ```
 
-Install the required Python packages:
+Install the dependencies:
 
 ```bash
-pip install langchain langchain-classic langchain-community langchain-chroma langchain-experimental langchain-huggingface langchain-openai langchain-text-splitters python-dotenv chromadb sentence-transformers pypdf
+pip install langchain langchain-classic langchain-community langchain-chroma langchain-experimental langchain-huggingface langchain-openai langchain-text-splitters python-dotenv chromadb sentence-transformers pypdf pymupdf
 ```
 
 ## Usage
 
-### 1) Build the vector store
+### 1. Build the vector store
 
-Run the ingestion script to chunk the source text and create the ChromaDB index:
+Run ingestion after adding or updating files in `data/`:
 
 ```bash
 python ingestion.py
 ```
 
-This will read every `.txt` file and text-based `.pdf` file directly inside `data/`, then create the local vector store in `./chroma_db`.
-Each run rebuilds the vector store from scratch so old chunks do not stay mixed with new chunks.
+Ingestion reads every supported file directly inside `data/`, creates chunks, embeds them, and rebuilds the ChromaDB vector store in `./chroma_db`.
 
-Semantic chunking is enabled by default. It embeds neighboring sentences and
-creates a boundary when their cosine-distance change reaches the configured
-95th percentile, while avoiding chunks smaller than 200 characters. The same
-embedding model is then reused to index the resulting chunks in Chroma.
+Each ingestion run uses a staging directory and replaces the existing store only after the new store is built successfully. If indexing fails, the previous vector store remains available.
 
-To use the previous character-based splitter instead, set:
+### 2. Choose a chunking strategy
+
+Semantic chunking is the default:
+
+```bash
+python ingestion.py
+```
+
+The semantic chunker uses neighboring sentence embeddings to identify topic boundaries. It is configured with a 95th percentile breakpoint threshold and a 200-character minimum chunk size.
+
+To use recursive character chunking instead:
 
 ```bash
 CHUNKING_STRATEGY=recursive python ingestion.py
 ```
 
-Supported values are `semantic` (default) and `recursive`. Recursive mode uses
-700-character chunks with 100-character overlap. Changing the chunking strategy
-or semantic threshold requires rerunning `python ingestion.py` to rebuild the
-stored index.
+Recursive mode uses 700-character chunks with 100-character overlap. Rebuild the index whenever you change the chunking strategy or modify files in `data/`.
 
-PDFs must contain selectable text. Scanned or image-only PDFs are not OCR processed and will be skipped with a warning when they contain no extractable text. Unreadable, corrupt, or encrypted PDFs are also skipped without preventing other valid documents from being indexed.
+### 3. Start the chat loop
 
-Ingestion builds the new index in a staging directory and replaces the existing
-`chroma_db` only after the build succeeds. If indexing fails, the previous vector
-store remains available.
-
-### 2) Start the chat loop
-
-After ingestion is complete, launch the local RAG chat session:
+After ingestion finishes, start the terminal chat:
 
 ```bash
 python chat.py
 ```
 
-Type your questions in the terminal. To exit, enter:
+Ask questions in the terminal. To exit:
 
 ```text
 exit
 ```
 
-For every question, the app prints:
+For each question, the app prints:
 
-1. The actual retrieval query
-2. The retrieved documents used as context
-3. The final AI answer
+1. The standalone retrieval query
+2. The retrieved and reranked context chunks
+3. The final grounded answer
 
-## Notes
+## Retrieval Strategy
 
-- The assistant only answers from the retrieved context. If the answer is not present in the source text, it will respond with a limited answer such as “I don’t know.”
-- The project is designed for local experimentation and learning, not production deployment.
-- The retriever first uses LangChain's ensemble weighting, then applies a small cross-encoder reranker.
-- Semantic chunking controls ingestion boundaries. It is separate from semantic
-  vector retrieval, which compares the question embedding with already-created
-  chunk embeddings in Chroma.
-- If you change any file in `data/`, rerun `python ingestion.py` so the ChromaDB store stays in sync.
-- Retrieved PDF chunks include their source filename and page number in terminal output.
+The retriever uses a two-stage ranking process:
+
+1. **Hybrid candidate retrieval**
+   - Chroma semantic retrieval uses MMR with `k=12`, `fetch_k=10`, and `lambda_mult=0.5`
+   - BM25 keyword retrieval returns `k=12` keyword-focused candidates
+   - LangChain's ensemble retriever combines both retrievers with equal weights
+
+2. **Cross-encoder reranking**
+   - Candidate documents are scored against the query using `cross-encoder/ms-marco-MiniLM-L-6-v2`
+   - The top 5 reranked chunks are passed to the chat model as final context
+
+This combination helps the assistant retrieve both semantically related passages and exact keyword matches, then refine the final context with a stronger relevance model.
+
+## Document Support
+
+Supported source files:
+
+- `.txt`
+- Text-based `.pdf`
+
+PDF files must contain selectable text. Scanned or image-only PDFs are not OCR processed. Empty, encrypted, corrupt, or unreadable PDFs are skipped with a warning so valid files can still be indexed.
+
+Although this project supports a multimodal-style document workflow across plain text and PDF sources, it does not perform image, audio, or video understanding.
+
+## Testing
+
+Run the unit tests with:
+
+```bash
+python -m unittest
+```
+
+The current tests cover:
+
+- document loading for text and PDFs
+- semantic and recursive chunking configuration
+- stable chunk metadata and IDs
+- hybrid retrieval setup
+- failure-safe ChromaDB rebuild behavior
+
+## Troubleshooting
 
 ### Chroma native binding error
 
-If ingestion reports that `chromadb_rust_bindings.chromadb_rust_bindings` is
-missing, reinstall Chroma from its binary wheel inside the active virtual
-environment:
+If ingestion reports that `chromadb_rust_bindings.chromadb_rust_bindings` is missing, reinstall Chroma from its binary wheel inside the active virtual environment:
 
 ```bash
 python -m pip install --force-reinstall --no-cache-dir --no-deps --only-binary=:all: chromadb==1.5.9
 python -c "import chromadb_rust_bindings.chromadb_rust_bindings; print('Chroma native bindings loaded')"
 ```
 
-## Future Plan
+## Notes
 
-- Offline evaluation set
-- RAGAS evaluation
-- Pipeline and build validation
+- The assistant is instructed to answer only from retrieved context.
+- If the answer is not available in the indexed documents, it should respond with a limited answer such as "I don't know."
+- Retrieved PDF chunks include source file and page metadata in terminal output.
+- This project is intended for local experimentation, prototyping, and portfolio demonstration rather than production deployment.
+
+## Future Work
+
+- Add an offline evaluation dataset
+- Add RAGAS or similar RAG quality evaluation
+- Add automated pipeline validation
+- Package dependencies in a dedicated requirements file
