@@ -17,51 +17,56 @@ because it ships a ready-to-use CLIP model with a simple .encode() method -
 no manual image preprocessing code needed on our end.
 """
 
-from sentence_transformers import SentenceTransformer
 from PIL import Image
+from sentence_transformers import SentenceTransformer
+from langchain_core.embeddings import Embeddings
 
-# Load the CLIP model ONE time when this file is first imported.
-# "clip-ViT-B-32" is a small/fast CLIP model - good for small projects.
-# The first run will download the model (a few hundred MB) and cache it.
-clip_model = SentenceTransformer("clip-ViT-B-32")
+CLIP_MODEL_NAME = "clip-ViT-B-32"
 
-def embed_image(image_path: str):
+class CLIPEmbeddings(Embeddings):
     """
-    Turn an image file into a CLIP embedding (a list of numbers).
+    LangChain-compatible CLIP embedding class.
 
-    Args:
-        image_path: path to an image file, e.g. "data/images/cat.jpg"
+    Chroma calls:
 
-    Returns:
-        A plain Python list of floats (Chroma needs plain lists, not
-        numpy arrays, so we call .tolist() at the end).
+        embed_documents()
+
+    when indexing data.
+
+    Chroma calls:
+
+        embed_query()
+
+    when performing similarity search.
     """
-    # .convert("RGB") avoids errors on PNGs that have a transparency channel
-    image = Image.open(image_path).convert("RGB")
 
-    embedding = clip_model.encode(
-       image,
-       normalize_embeddings=True
-    )
+    def __init__(self):
 
-    return embedding.tolist()
+        # Load CLIP only once.
+        self.model = SentenceTransformer(CLIP_MODEL_NAME)
 
-def embed_text(text: str):
-    """
-    Turn a plain text string (like a user's question) into a CLIP embedding.
+    def embed_documents(self, image_paths):
 
-    This uses the SAME model as embed_image(), which is what makes the
-    resulting vector directly comparable to image vectors.
+        embeddings = []
 
-    Args:
-        text: any string, e.g. "a photo of a red car"
+        for image_path in image_paths:
 
-    Returns:
-        A plain Python list of floats.
-    """
-    embedding = clip_model.encode(
-        text,
-        normalize_embeddings=True
-    )
+            image = Image.open(image_path).convert("RGB")
 
-    return embedding.tolist()
+            vector = self.model.encode(
+                image,
+                normalize_embeddings=True,
+            )
+
+            embeddings.append(vector.tolist())
+
+        return embeddings
+
+    def embed_query(self, text):
+
+        vector = self.model.encode(
+            text,
+            normalize_embeddings=True,
+        )
+
+        return vector.tolist()
