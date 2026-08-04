@@ -1,8 +1,4 @@
 """
-clip_utils.py
---------------
-Helper functions for working with the CLIP model.
-
 CLIP (Contrastive Language-Image Pretraining) is a model that understands
 BOTH images and text, and places them into the SAME "embedding space" (a
 list of numbers, aka a vector).
@@ -29,7 +25,6 @@ from PIL import Image
 # The first run will download the model (a few hundred MB) and cache it.
 clip_model = SentenceTransformer("clip-ViT-B-32")
 
-
 def embed_image(image_path: str):
     """
     Turn an image file into a CLIP embedding (a list of numbers).
@@ -43,11 +38,15 @@ def embed_image(image_path: str):
     """
     # .convert("RGB") avoids errors on PNGs that have a transparency channel
     image = Image.open(image_path).convert("RGB")
-    embedding = clip_model.encode(image)
+
+    embedding = clip_model.encode(
+       image,
+       normalize_embeddings=True
+    )
+
     return embedding.tolist()
 
-
-def embed_text_query(text: str):
+def embed_text(text: str):
     """
     Turn a plain text string (like a user's question) into a CLIP embedding.
 
@@ -60,5 +59,9 @@ def embed_text_query(text: str):
     Returns:
         A plain Python list of floats.
     """
-    embedding = clip_model.encode(text)
+    embedding = clip_model.encode(
+        text,
+        normalize_embeddings=True
+    )
+
     return embedding.tolist()

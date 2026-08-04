@@ -13,10 +13,10 @@ from langchain_core.documents import Document
 from langchain_huggingface import HuggingFaceEmbeddings
 from hybrid_retrieval import load_documents, split_documents_with_ids
 from recursive_chunking import RECURSIVE_STRATEGY, build_recursive_chunker
+from embeddings.text_embeddings import get_text_embedding_model
 
 DATA_DIR = Path("data")
 PERSIST_DIR = Path("chroma_db")
-EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 DEFAULT_CHUNKING_STRATEGY = "semantic"
 SUPPORTED_CHUNKING_STRATEGIES = {
     DEFAULT_CHUNKING_STRATEGY,
@@ -129,7 +129,6 @@ def rebuild_vector_store(
         if staging_dir.exists():
             shutil.rmtree(staging_dir)
 
-
 def main() -> None:
     load_dotenv()
     verify_chroma_native_bindings()
@@ -140,8 +139,7 @@ def main() -> None:
         raise RuntimeError(
             f"No usable .txt or .pdf documents found in {DATA_DIR.resolve()}"
         )
-
-    embedding_model = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL_NAME)
+    embedding_model = get_text_embedding_model()
     splitter = build_chunker(strategy, embedding_model)
     chunks = split_documents_with_ids(
         source_documents,
