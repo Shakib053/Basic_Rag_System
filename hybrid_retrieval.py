@@ -128,6 +128,7 @@ def build_hybrid_retriever(
             "lambda_mult": 0.5,
         }
     )
+    print("bult hybrid retriever called")
     keyword_retriever = _build_bm25_retriever_from_vectorstore(vectorstore, k=keyword_k)
     return EnsembleRetriever(
         retrievers=[semantic_retriever, keyword_retriever],

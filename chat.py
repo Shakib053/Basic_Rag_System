@@ -6,11 +6,14 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
 from hybrid_retrieval import build_hybrid_retriever, rerank_documents
+from query_enhancement import build_multi_query_retriever, rewrite_query
 
 load_dotenv()
 HF_TOKEN = os.getenv("HF_TOKEN")
 SHOW_RETRIEVED_DOCS = True
 FINAL_CONTEXT_DOCS = 5
+ENABLE_MULTI_QUERY = True
+MULTI_QUERY_COUNT = 3
 
 if HF_TOKEN:
     os.environ["HUGGINGFACE_HUB_TOKEN"] = HF_TOKEN
@@ -73,31 +76,18 @@ def print_retrieved_docs(docs):
     print()
 
 hybrid_retriever = build_hybrid_retriever(vectorstore)
+if ENABLE_MULTI_QUERY:
+    hybrid_retriever = build_multi_query_retriever(
+        hybrid_retriever,
+        llm,
+        num_queries=MULTI_QUERY_COUNT,
+    )
 
 def get_hybrid_docs(query):
     return hybrid_retriever.invoke(query)
 
 def get_rag_response(question, chat_history):
-    if chat_history:
-        condense_prompt = ChatPromptTemplate.from_messages([
-            ("system",
-             "Given the conversation history and a follow-up question, "
-             "rewrite the follow-up as a standalone QUESTION (not an answer, not a statement). "
-             "Example:\n"
-             "History: Human: My name is Shakib. AI: Nice to meet you, Shakib.\n"
-             "Follow-up: what do i do\n"
-             "Standalone: What is Shakib's profession?\n\n"
-             "Now rewrite the follow-up below:"),
-            MessagesPlaceholder(variable_name="chat_history"),
-            ("human", "{question}"),
-        ])
-        condense_chain = condense_prompt | llm
-        standalone = condense_chain.invoke({
-            "chat_history": chat_history,
-            "question": question
-        }).content
-    else:
-        standalone = question
+    standalone = rewrite_query(question, chat_history, llm)
 
     print("RAG retrieval query:", standalone)
 
