@@ -3,9 +3,7 @@ from __future__ import annotations
 from langchain_classic.retrievers import MultiQueryRetriever
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, PromptTemplate
 
-# ---------------------------------------------------------------------------
-# Stage 1: retrieval-optimized query rewriting
-# ---------------------------------------------------------------------------
+# step 1: retrieval-optimized query rewriting
 
 REWRITE_SYSTEM_PROMPT = (
     "You rewrite the user's question into a single standalone QUERY that is "
@@ -23,7 +21,6 @@ REWRITE_SYSTEM_PROMPT = (
     "Follow-up: what do i do\n"
     "Rewritten: What is Kazi Tanjim Shakib's profession; what is Shakib's job"
 )
-
 
 def build_rewrite_prompt() -> ChatPromptTemplate:
     return ChatPromptTemplate.from_messages([
@@ -51,10 +48,7 @@ def rewrite_query(question: str, chat_history, llm) -> str:
     text = str(content).strip()
     return text if text else question
 
-
-# ---------------------------------------------------------------------------
 # Stage 2: multi-query expansion
-# ---------------------------------------------------------------------------
 
 MULTI_QUERY_PROMPT = PromptTemplate.from_template(
     "You are an assistant that helps a RAG retriever find relevant documents. "
@@ -65,12 +59,11 @@ MULTI_QUERY_PROMPT = PromptTemplate.from_template(
     "Original question: {question}"
 )
 
-
 def build_multi_query_retriever(
     retriever,
     llm,
     *,
-    num_queries: int = 3,
+    num_queries: int = 2,
     include_original: bool = True,
 ) -> MultiQueryRetriever:
     """Wrap a retriever so it searches for several query paraphrases.
