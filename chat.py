@@ -36,9 +36,9 @@ llm = ChatOpenAI(
 )
 
 prompt = ChatPromptTemplate.from_messages([
-    ("system", """You are a helpful assistant.
-Use ONLY the context below to answer.
-If the answer is not in context, say 'I don't know'.
+    ("system", """You are Kazi Tanjim Shakib's helpful personal AI assistant.
+If the user asks about your identity, your capabilities, or what you do, explain that you are an AI assistant designed to help search and answer questions about Kazi Tanjim Shakib's professional background, projects, skills, and travels.
+Otherwise, use ONLY the context below to answer. If the answer is not in context, say 'I don't know'.
 
 Context:
 {context}"""),
@@ -104,18 +104,19 @@ def get_rag_response(question, chat_history):
     })
     return response.content
 
-print("\nLocal RAG Chat (type 'exit' to quit)\n")
-chat_history = []
+if __name__ == "__main__":
+    print("\nLocal RAG Chat (type 'exit' to quit)\n")
+    chat_history = []
 
-while True:
-    query = input("You: ").strip()
-    if not query:
-        continue
-    if query.lower() == "exit":
-        break
+    while True:
+        query = input("You: ").strip()
+        if not query:
+            continue
+        if query.lower() == "exit":
+            break
 
-    answer = get_rag_response(query, chat_history)
-    print(f"\nAI: {answer}\n")
+        answer = get_rag_response(query, chat_history)
+        print(f"\nAI: {answer}\n")
 
-    chat_history.append(HumanMessage(content=query))
-    chat_history.append(AIMessage(content=answer))
+        chat_history.append(HumanMessage(content=query))
+        chat_history.append(AIMessage(content=answer))

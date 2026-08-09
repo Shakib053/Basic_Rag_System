@@ -57,7 +57,7 @@ class ChunkerConfigurationTests(unittest.TestCase):
         semantic_chunker.assert_called_once_with(
             embeddings=embeddings,
             breakpoint_threshold_type="percentile",
-            breakpoint_threshold_amount=95,
+            breakpoint_threshold_amount=90,
             min_chunk_size=200,
         )
 

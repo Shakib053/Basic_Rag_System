@@ -51,7 +51,7 @@ class HybridRetrieverConfigurationTests(unittest.TestCase):
             search_type="mmr",
             search_kwargs={
                 "k": 12,
-                "fetch_k": 10,
+                "fetch_k": 20,
                 "lambda_mult": 0.5,
             },
         )

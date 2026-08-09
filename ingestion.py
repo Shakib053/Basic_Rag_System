@@ -22,7 +22,7 @@ SUPPORTED_CHUNKING_STRATEGIES = {
     DEFAULT_CHUNKING_STRATEGY,
     RECURSIVE_STRATEGY
 }
-SEMANTIC_BREAKPOINT_PERCENTILE = 95
+SEMANTIC_BREAKPOINT_PERCENTILE = 90
 SEMANTIC_MIN_CHUNK_SIZE = 200
 
 def get_chunking_strategy(value: str | None = None) -> str:
@@ -139,6 +139,16 @@ def main() -> None:
         raise RuntimeError(
             f"No usable .txt or .pdf documents found in {DATA_DIR.resolve()}"
         )
+
+    # Pre-split long documents to ensure semantic chunker doesn't create oversized chunks
+    if strategy == "semantic":
+        from langchain_text_splitters import RecursiveCharacterTextSplitter
+        pre_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1500,
+            chunk_overlap=200,
+        )
+        source_documents = pre_splitter.split_documents(source_documents)
+
     embedding_model = get_text_embedding_model()
     splitter = build_chunker(strategy, embedding_model)
     chunks = split_documents_with_ids(
@@ -146,7 +156,7 @@ def main() -> None:
         splitter,
         chunking_strategy=strategy,
     )
-    print(f"Loaded {len(source_documents)} source documents")
+    print(f"Loaded {len(source_documents)} source documents (after pre-splitting)" if strategy == "semantic" else f"Loaded {len(source_documents)} source documents")
     print(f"Created {len(chunks)} chunks using {strategy} chunking")
 
     rebuild_vector_store(chunks, embedding_model, PERSIST_DIR)

@@ -85,6 +85,7 @@ def split_documents_with_ids(
     chunking_strategy: str | None = None,
 ) -> list[Document]:
     chunks: list[Document] = []
+    location_counters: dict[str, int] = {}
 
     for document in documents:
         document_chunks = splitter.split_documents([document])
@@ -92,7 +93,10 @@ def split_documents_with_ids(
         page = document.metadata.get("page")
         location = f"{source}::page-{page}" if page is not None else source
 
-        for index, chunk in enumerate(document_chunks):
+        for chunk in document_chunks:
+            index = location_counters.get(location, 0)
+            location_counters[location] = index + 1
+            
             chunk.metadata["chunk_index"] = index
             chunk.metadata["chunk_id"] = f"{location}::chunk-{index}"
             if chunking_strategy is not None:
@@ -124,7 +128,7 @@ def build_hybrid_retriever(
         search_type="mmr",
         search_kwargs={
             "k": semantic_k,
-            "fetch_k": 10,
+            "fetch_k": 20,
             "lambda_mult": 0.5,
         }
     )
