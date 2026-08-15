@@ -46,6 +46,7 @@ def load_image_documents() -> list[Document]:
                     "source": image["source"],
                     "page": image["page"],
                     "image_index": image["image_index"],
+                    "image_path": str(image["image_path"]),
                     "file_type": "image",
                 },
             )

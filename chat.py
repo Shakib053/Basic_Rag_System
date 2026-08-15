@@ -6,6 +6,11 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
 from hybrid_retrieval import build_hybrid_retriever, rerank_documents
+from image_retrieval import (
+    format_image_references,
+    get_image_docs_with_scores,
+    load_image_vectorstore,
+)
 from query_enhancement import build_multi_query_retriever, rewrite_query
 
 load_dotenv()
@@ -26,6 +31,7 @@ vectorstore = Chroma(
     persist_directory="./chroma_db",
     embedding_function=embedding_model
 )
+image_vectorstore = load_image_vectorstore()
 
 llm = ChatOpenAI(
     model="Qwen/Qwen2.5-72B-Instruct",   # or any supported model
@@ -38,8 +44,7 @@ llm = ChatOpenAI(
 prompt = ChatPromptTemplate.from_messages([
     ("system", """You are Kazi Tanjim Shakib's helpful personal AI assistant.
 If the user asks about your identity, your capabilities, or what you do, explain that you are an AI assistant designed to help search and answer questions about Kazi Tanjim Shakib's professional background, projects, skills, and travels.
-Otherwise, use ONLY the context below to answer. If the answer is not in context, say 'I don't know'.
-
+Otherwise, use ONLY the context below to answer.
 Context:
 {context}"""),
     MessagesPlaceholder(variable_name="chat_history"),
@@ -75,6 +80,26 @@ def print_retrieved_docs(docs):
     
     print()
 
+def print_retrieved_images(image_results):
+    if not SHOW_RETRIEVED_DOCS or not image_results:
+        return
+
+    print("\nRetrieved image references:")
+    for index, reference in enumerate(format_image_references(image_results), start=1):
+        source = reference["source"]
+        page = reference["page"]
+        image_index = reference["image_index"]
+        image_path = reference["image_path"]
+        score = reference["score"]
+
+        page_text = f" | page {page}" if page is not None else ""
+        image_text = f" | image {image_index}" if image_index is not None else ""
+        score_text = f" | distance: {score:.4f}" if score is not None else ""
+        print(f"{index}. {source}{page_text}{image_text}{score_text}")
+        print(f"   {image_path}")
+
+    print()
+
 hybrid_retriever = build_hybrid_retriever(vectorstore)
 if ENABLE_MULTI_QUERY:
     hybrid_retriever = build_multi_query_retriever(
@@ -92,8 +117,10 @@ def get_rag_response(question, chat_history):
     print("RAG retrieval query:", standalone)
 
     candidate_docs = get_hybrid_docs(standalone)
+    image_results = get_image_docs_with_scores(standalone, image_vectorstore)
     docs = rerank_documents(standalone, candidate_docs, top_k = FINAL_CONTEXT_DOCS)
     print_retrieved_docs(docs)
+    print_retrieved_images(image_results)
     context = format_docs(docs)
 
     rag_chain = prompt | llm
