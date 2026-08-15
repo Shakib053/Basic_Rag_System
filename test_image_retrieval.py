@@ -5,6 +5,7 @@ from unittest.mock import Mock, patch
 from langchain_core.documents import Document
 
 from image_retrieval import (
+    format_image_context,
     format_image_references,
     get_image_docs,
     get_image_docs_with_scores,
@@ -104,6 +105,38 @@ class ImageRetrievalTests(unittest.TestCase):
                     "score": 0.25,
                 }
             ],
+        )
+
+    def test_formats_image_context_with_score(self):
+        document = Document(
+            page_content="data/extracted_images/sample/page_2_img_1.png",
+            metadata={
+                "source": "data/sample.pdf",
+                "page": 2,
+                "image_index": 1,
+                "file_type": "image",
+            },
+        )
+
+        context = format_image_context([(document, 0.25)])
+
+        self.assertEqual(
+            context,
+            "1. source: data/sample.pdf | page: 2 | image index: 1 | "
+            "path: data/extracted_images/sample/page_2_img_1.png | distance: 0.2500",
+        )
+
+    def test_formats_image_context_without_score_and_uses_fallback_path(self):
+        document = Document(
+            page_content="fallback/path.png",
+            metadata={"source": "data/sample.pdf"},
+        )
+
+        context = format_image_context([document])
+
+        self.assertEqual(
+            context,
+            "1. source: data/sample.pdf | path: fallback/path.png",
         )
 
 

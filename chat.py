@@ -5,6 +5,7 @@ from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
+from context_formatting import build_combined_context
 from hybrid_retrieval import build_hybrid_retriever, rerank_documents
 from image_retrieval import (
     format_image_references,
@@ -50,9 +51,6 @@ Context:
     MessagesPlaceholder(variable_name="chat_history"),
     ("human", "{question}"),
 ])
-
-def format_docs(docs):
-    return "\n\n".join(doc.page_content for doc in docs)
 
 def print_retrieved_docs(docs):
     if not SHOW_RETRIEVED_DOCS:
@@ -121,7 +119,7 @@ def get_rag_response(question, chat_history):
     docs = rerank_documents(standalone, candidate_docs, top_k = FINAL_CONTEXT_DOCS)
     print_retrieved_docs(docs)
     print_retrieved_images(image_results)
-    context = format_docs(docs)
+    context = build_combined_context(docs, image_results)
 
     rag_chain = prompt | llm
     response = rag_chain.invoke({

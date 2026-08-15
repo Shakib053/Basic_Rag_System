@@ -77,3 +77,30 @@ def format_image_references(
         )
 
     return references
+
+
+def format_image_context(
+    image_results: Sequence[Document] | Sequence[tuple[Document, float]],
+) -> str:
+    references = format_image_references(image_results)
+    lines = []
+
+    for index, reference in enumerate(references, start=1):
+        source = reference["source"]
+        page = reference["page"]
+        image_index = reference["image_index"]
+        image_path = reference["image_path"]
+        score = reference["score"]
+
+        parts = [f"{index}. source: {source}"]
+        if page is not None:
+            parts.append(f"page: {page}")
+        if image_index is not None:
+            parts.append(f"image index: {image_index}")
+        parts.append(f"path: {image_path}")
+        if score is not None:
+            parts.append(f"distance: {score:.4f}")
+
+        lines.append(" | ".join(parts))
+
+    return "\n".join(lines)
