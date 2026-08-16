@@ -12,11 +12,8 @@ from langchain_core.documents import Document
 from langchain_classic.retrievers import EnsembleRetriever
 from sentence_transformers import CrossEncoder
 
-from query_enhancement import is_travel_query
-
 RERANKER_MODEL_NAME = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 SUPPORTED_FILE_TYPES = {".txt", ".pdf"}
-TRAVEL_FILE_NAME = "Travel_history.txt"
 
 def load_documents(data_dir: str | Path) -> list[Document]:
     data_path = Path(data_dir)
@@ -173,69 +170,3 @@ def rerank_documents(
         reranked_documents.append(document)
 
     return reranked_documents
-
-
-def _is_travel_document(document: Document) -> bool:
-    return document.metadata.get("file_name") == TRAVEL_FILE_NAME
-
-
-def _refresh_rerank_ranks(documents: Sequence[Document]) -> None:
-    for rank, document in enumerate(documents, start=1):
-        document.metadata["rerank_rank"] = rank
-
-
-def select_final_documents(
-    query: str,
-    documents: Sequence[Document],
-    *,
-    top_k: int = 5,
-    model_name: str = RERANKER_MODEL_NAME,
-) -> list[Document]:
-    """Rerank documents and keep travel evidence for travel-intent queries."""
-    if not documents:
-        return []
-
-    reranked_documents = rerank_documents(
-        query,
-        documents,
-        top_k=len(documents),
-        model_name=model_name,
-    )
-    final_documents = list(reranked_documents[:top_k])
-
-    if (
-        not is_travel_query(query)
-        or any(_is_travel_document(document) for document in final_documents)
-    ):
-        _refresh_rerank_ranks(final_documents)
-        return final_documents
-
-    best_travel_document = next(
-        (
-            document for document in reranked_documents
-            if _is_travel_document(document)
-        ),
-        None,
-    )
-    if best_travel_document is None:
-        _refresh_rerank_ranks(final_documents)
-        return final_documents
-
-    replacement_index = next(
-        (
-            index for index in range(len(final_documents) - 1, -1, -1)
-            if not _is_travel_document(final_documents[index])
-        ),
-        None,
-    )
-    if replacement_index is None:
-        _refresh_rerank_ranks(final_documents)
-        return final_documents
-
-    final_documents[replacement_index] = best_travel_document
-    final_documents.sort(
-        key=lambda document: float(document.metadata.get("rerank_score", 0.0)),
-        reverse=True,
-    )
-    _refresh_rerank_ranks(final_documents)
-    return final_documents

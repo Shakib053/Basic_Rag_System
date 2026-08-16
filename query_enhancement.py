@@ -1,52 +1,7 @@
 from __future__ import annotations
 
-import re
-
 from langchain_classic.retrievers import MultiQueryRetriever
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, PromptTemplate
-
-TRAVEL_EXPANSION_TERMS = (
-    "travel history",
-    "trip destinations",
-    "visited places",
-    "vacation",
-    "tour",
-    "destination",
-)
-
-TRAVEL_QUERY_PATTERNS = (
-    re.compile(r"\btravels?\b", re.IGNORECASE),
-    re.compile(r"\btrips?\b", re.IGNORECASE),
-    re.compile(r"\bvisited?\b", re.IGNORECASE),
-    re.compile(r"\bvisiting\b", re.IGNORECASE),
-    re.compile(r"\bvacations?\b", re.IGNORECASE),
-    re.compile(r"\btours?\b", re.IGNORECASE),
-    re.compile(r"\bdestinations?\b", re.IGNORECASE),
-    re.compile(r"\bwhere\s+(?:did|has|have)\b.*\b(?:go|been|visit|visited)\b", re.IGNORECASE),
-    re.compile(r"\bplaces?\b.*\bvisited?\b", re.IGNORECASE),
-)
-
-
-def is_travel_query(query: str) -> bool:
-    """Return whether ``query`` is asking about travel history or destinations."""
-    return any(pattern.search(query) for pattern in TRAVEL_QUERY_PATTERNS)
-
-
-def expand_travel_query(query: str) -> str:
-    """Add deterministic travel terms for ambiguous destination questions."""
-    text = query.strip()
-    if not text or not is_travel_query(text):
-        return query
-
-    lower_text = text.lower()
-    missing_terms = [
-        term for term in TRAVEL_EXPANSION_TERMS
-        if term.lower() not in lower_text
-    ]
-    if not missing_terms:
-        return text
-
-    return f"{text}; {'; '.join(missing_terms)}"
 
 # step 1: retrieval-optimized query rewriting
 
