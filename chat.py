@@ -7,7 +7,6 @@ from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
 from context_formatting import build_combined_context
 from hybrid_retrieval import build_hybrid_retriever, rerank_documents
-from collections import Counter
 
 from image_retrieval import (
     format_image_references,
@@ -117,19 +116,6 @@ def get_rag_response(question, chat_history):
     print("RAG retrieval query:", standalone)
 
     candidate_docs = get_hybrid_docs(standalone)
-    print("Candidate pool by source file:",
-      Counter(d.metadata.get("file_name") for d in candidate_docs))
-
-    for i, doc in enumerate(candidate_docs, 1):
-        print(
-        i,
-        "|",
-        doc.metadata.get("file_name"),
-        "| page:",
-        doc.metadata.get("page"),
-        "| chunk:",
-        doc.metadata.get("chunk_index"),
-        )
 
     image_results = get_image_docs_with_scores(standalone, image_vectorstore)
     docs = rerank_documents(standalone, candidate_docs, top_k = FINAL_CONTEXT_DOCS)
