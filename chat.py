@@ -6,13 +6,17 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
 from context_formatting import build_combined_context
-from hybrid_retrieval import build_hybrid_retriever, rerank_documents
+from hybrid_retrieval import build_hybrid_retriever, select_final_documents
 from image_retrieval import (
     format_image_references,
     get_image_docs_with_scores,
     load_image_vectorstore,
 )
-from query_enhancement import build_multi_query_retriever, rewrite_query
+from query_enhancement import (
+    build_multi_query_retriever,
+    expand_travel_query,
+    rewrite_query,
+)
 
 load_dotenv()
 HF_TOKEN = os.getenv("HF_TOKEN")
@@ -111,12 +115,17 @@ def get_hybrid_docs(query):
 
 def get_rag_response(question, chat_history):
     standalone = rewrite_query(question, chat_history, llm)
+    retrieval_query = expand_travel_query(standalone)
 
-    print("RAG retrieval query:", standalone)
+    print("RAG retrieval query:", retrieval_query)
 
-    candidate_docs = get_hybrid_docs(standalone)
-    image_results = get_image_docs_with_scores(standalone, image_vectorstore)
-    docs = rerank_documents(standalone, candidate_docs, top_k = FINAL_CONTEXT_DOCS)
+    candidate_docs = get_hybrid_docs(retrieval_query)
+    image_results = get_image_docs_with_scores(retrieval_query, image_vectorstore)
+    docs = select_final_documents(
+        retrieval_query,
+        candidate_docs,
+        top_k=FINAL_CONTEXT_DOCS,
+    )
     print_retrieved_docs(docs)
     print_retrieved_images(image_results)
     context = build_combined_context(docs, image_results)
