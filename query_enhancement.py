@@ -11,15 +11,14 @@ REWRITE_SYSTEM_PROMPT = (
     "- Resolve pronouns and ellipsis using the conversation history so the "
     "query stands alone.\n"
     "- Expand abbreviations and acronyms to their full forms.\n"
-    "- Add likely synonyms and domain terms so that both BM25 keyword search "
-    "and semantic search match more passages.\n"
-    "- If the question has several distinct parts, merge them into one compact "
-    "search query that captures all of them (e.g. sub-queries joined by ';').\n"
+    "- Mention the subject name ('Kazi Tanjim Shakib') naturally ONCE. Do NOT repeat or spam the name multiple times across phrases.\n"
+    "- Add relevant domain synonyms and search terms (e.g., travel, destinations, trips, locations, visits, projects, skills).\n"
+    "- If the question has several distinct parts, merge them into one compact search query.\n"
     "- Output ONLY the rewritten query. No prefixes, no quotes, no explanation.\n"
     "Example:\n"
-    "History: Human: My name is Shakib. AI: Nice to meet you, Shakib.\n"
-    "Follow-up: what do i do\n"
-    "Rewritten: What is Kazi Tanjim Shakib's profession; what is Shakib's job"
+    "History: Human: What about travel? AI: I can help with travel history.\n"
+    "Follow-up: where did i go\n"
+    "Rewritten: Kazi Tanjim Shakib travel history destinations trips locations visited"
 )
 
 def build_rewrite_prompt() -> ChatPromptTemplate:

@@ -6,6 +6,7 @@ from unittest.mock import Mock, patch
 from langchain_core.documents import Document
 
 from hybrid_retrieval import (
+    _clean_pdf_headers,
     build_hybrid_retriever,
     load_documents,
     split_documents_with_ids,
@@ -98,6 +99,20 @@ class DocumentLoadingTests(unittest.TestCase):
         self.assertTrue(all(doc.metadata["file_name"] == "guide.pdf" for doc in documents))
         self.assertTrue(all(doc.metadata["file_type"] == "pdf" for doc in documents))
 
+    def test_clean_pdf_headers_strips_repeating_header(self):
+        pages = [
+            Document(page_content="REPEATING HEADER | TITLE\nContent of page 1"),
+            Document(page_content="REPEATING HEADER | TITLE\nContent of page 2"),
+            Document(page_content="REPEATING HEADER | TITLE\nContent of page 3"),
+        ]
+
+        cleaned = _clean_pdf_headers(pages)
+
+        self.assertEqual(len(cleaned), 3)
+        self.assertEqual(cleaned[0].page_content, "Content of page 1")
+        self.assertEqual(cleaned[1].page_content, "Content of page 2")
+        self.assertEqual(cleaned[2].page_content, "Content of page 3")
+
     @patch("hybrid_retrieval.warnings.warn")
     @patch("hybrid_retrieval.PyMuPDFLoader")
     def test_warns_and_continues_for_unreadable_pdf(self, loader_class, warn):
@@ -126,7 +141,7 @@ class DocumentLoadingTests(unittest.TestCase):
         self.assertTrue(ids[0].startswith("data/a.pdf::page-0::chunk-"))
         self.assertTrue(ids[-1].startswith("data/a.pdf::page-1::chunk-"))
 
-    def test_chunk_metadata_is_preserved_and_strategy_is_recorded(self):
+    def test_chunk_metadata_is_preserved_and_strategy_and_subject_recorded(self):
         documents = [
             Document(
                 page_content="A complete sentence about one topic.",
@@ -152,7 +167,9 @@ class DocumentLoadingTests(unittest.TestCase):
         self.assertEqual(chunks[0].metadata["file_type"], "pdf")
         self.assertEqual(chunks[0].metadata["page"], 2)
         self.assertEqual(chunks[0].metadata["chunk_index"], 0)
+        self.assertEqual(chunks[0].metadata["subject"], "Kazi Tanjim Shakib")
         self.assertEqual(chunks[0].metadata["chunking_strategy"], "semantic")
+        self.assertTrue(chunks[0].page_content.startswith("[Subject: Kazi Tanjim Shakib | Source: guide.pdf]"))
 
     def test_semantic_splitter_topic_boundaries_become_separate_chunks(self):
         class DeterministicSemanticSplitter:
@@ -169,7 +186,7 @@ class DocumentLoadingTests(unittest.TestCase):
                     "Python is used for the backend."
                     "<topic-change>Dhaka was the destination of the trip."
                 ),
-                metadata={"source": "data/profile.txt"},
+                metadata={"source": "data/profile.txt", "file_name": "profile.txt"},
             )
         ]
 
@@ -182,8 +199,8 @@ class DocumentLoadingTests(unittest.TestCase):
         self.assertEqual(
             [chunk.page_content for chunk in chunks],
             [
-                "Python is used for the backend.",
-                "Dhaka was the destination of the trip.",
+                "[Subject: Kazi Tanjim Shakib | Source: profile.txt]\n\nPython is used for the backend.",
+                "[Subject: Kazi Tanjim Shakib | Source: profile.txt]\n\nDhaka was the destination of the trip.",
             ],
         )
         self.assertEqual([chunk.metadata["chunk_index"] for chunk in chunks], [0, 1])

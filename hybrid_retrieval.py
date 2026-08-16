@@ -15,6 +15,37 @@ from sentence_transformers import CrossEncoder
 RERANKER_MODEL_NAME = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 SUPPORTED_FILE_TYPES = {".txt", ".pdf"}
 
+DEFAULT_SUBJECT = "Kazi Tanjim Shakib"
+
+def _clean_pdf_headers(pages: list[Document]) -> list[Document]:
+    """Detect and strip repeating header lines across multi-page PDFs."""
+    if len(pages) <= 1:
+        return pages
+
+    header_candidates: dict[str, int] = {}
+    for page in pages:
+        lines = [line.strip() for line in page.page_content.splitlines() if line.strip()]
+        if lines:
+            for line in lines[:2]:
+                header_candidates[line] = header_candidates.get(line, 0) + 1
+
+    threshold = max(1, len(pages) // 2)
+    common_headers = {line for line, count in header_candidates.items() if count > threshold}
+
+    if not common_headers:
+        return pages
+
+    cleaned_pages = []
+    for page in pages:
+        lines = page.page_content.splitlines()
+        cleaned_lines = [line for line in lines if line.strip() not in common_headers]
+        cleaned_content = "\n".join(cleaned_lines).strip()
+        if cleaned_content:
+            page.page_content = cleaned_content
+            cleaned_pages.append(page)
+
+    return cleaned_pages
+
 def load_documents(data_dir: str | Path) -> list[Document]:
     data_path = Path(data_dir)
     documents: list[Document] = []
@@ -55,6 +86,8 @@ def load_documents(data_dir: str | Path) -> list[Document]:
             )
             continue
 
+        pdf_pages = _clean_pdf_headers(pdf_pages)
+
         readable_pages = 0
         for page in pdf_pages:
             if not page.page_content.strip():
@@ -83,6 +116,7 @@ def split_documents_with_ids(
     splitter,
     *,
     chunking_strategy: str | None = None,
+    subject: str = DEFAULT_SUBJECT,
 ) -> list[Document]:
     chunks: list[Document] = []
     location_counters: dict[str, int] = {}
@@ -90,15 +124,21 @@ def split_documents_with_ids(
     for document in documents:
         document_chunks = splitter.split_documents([document])
         source = document.metadata.get("source", "unknown")
+        file_name = document.metadata.get("file_name", Path(source).name)
         page = document.metadata.get("page")
         location = f"{source}::page-{page}" if page is not None else source
 
         for chunk in document_chunks:
             index = location_counters.get(location, 0)
             location_counters[location] = index + 1
-            
+
+            prefix = f"[Subject: {subject} | Source: {file_name}]\n\n"
+            if not chunk.page_content.startswith("[Subject:"):
+                chunk.page_content = prefix + chunk.page_content.strip()
+
             chunk.metadata["chunk_index"] = index
             chunk.metadata["chunk_id"] = f"{location}::chunk-{index}"
+            chunk.metadata["subject"] = subject
             if chunking_strategy is not None:
                 chunk.metadata["chunking_strategy"] = chunking_strategy
             chunks.append(chunk)
