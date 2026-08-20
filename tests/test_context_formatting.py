@@ -37,6 +37,30 @@ class ContextFormattingTests(unittest.TestCase):
         self.assertEqual(context, "Only text context.")
         self.assertNotIn("Image references:", context)
 
+    def test_renders_source_headers_from_chunk_metadata(self):
+        text_docs = [
+            Document(
+                page_content="Book content about memory.",
+                metadata={"file_name": "guide.pdf", "page": 2, "chunk_index": 4},
+            ),
+        ]
+
+        context = build_combined_context(text_docs, [])
+
+        self.assertIn("[Source: guide.pdf | page 3]\n\nBook content about memory.", context)
+
+    def test_renders_header_from_source_when_file_name_is_missing(self):
+        text_docs = [
+            Document(
+                page_content="Fallback content.",
+                metadata={"source": "data/notes.txt"},
+            ),
+        ]
+
+        context = build_combined_context(text_docs, [])
+
+        self.assertIn("[Source: notes.txt]\n\nFallback content.", context)
+
 
 if __name__ == "__main__":
     unittest.main()

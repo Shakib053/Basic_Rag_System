@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Sequence
 
 from langchain_core.documents import Document
@@ -7,8 +8,28 @@ from langchain_core.documents import Document
 from image_retrieval import format_image_context
 
 
+def _source_header(doc: Document) -> str:
+    file_name = doc.metadata.get("file_name")
+    if not file_name:
+        source = doc.metadata.get("source")
+        file_name = Path(source).name if source else None
+    if not file_name:
+        return ""
+
+    parts = [f"Source: {file_name}"]
+    page = doc.metadata.get("page")
+    if isinstance(page, int):
+        parts.append(f"page {page + 1}")
+
+    return f"[{' | '.join(parts)}]"
+
+
 def format_docs(docs: Sequence[Document]) -> str:
-    return "\n\n".join(doc.page_content for doc in docs)
+    formatted_chunks = []
+    for doc in docs:
+        header = _source_header(doc)
+        formatted_chunks.append(f"{header}\n\n{doc.page_content}" if header else doc.page_content)
+    return "\n\n".join(formatted_chunks)
 
 
 def build_combined_context(

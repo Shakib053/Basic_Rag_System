@@ -141,7 +141,7 @@ class DocumentLoadingTests(unittest.TestCase):
         self.assertTrue(ids[0].startswith("data/a.pdf::page-0::chunk-"))
         self.assertTrue(ids[-1].startswith("data/a.pdf::page-1::chunk-"))
 
-    def test_chunk_metadata_is_preserved_and_strategy_and_subject_recorded(self):
+    def test_chunk_metadata_is_preserved_and_strategy_recorded(self):
         documents = [
             Document(
                 page_content="A complete sentence about one topic.",
@@ -167,9 +167,9 @@ class DocumentLoadingTests(unittest.TestCase):
         self.assertEqual(chunks[0].metadata["file_type"], "pdf")
         self.assertEqual(chunks[0].metadata["page"], 2)
         self.assertEqual(chunks[0].metadata["chunk_index"], 0)
-        self.assertEqual(chunks[0].metadata["subject"], "Kazi Tanjim Shakib")
+        self.assertNotIn("subject", chunks[0].metadata)
         self.assertEqual(chunks[0].metadata["chunking_strategy"], "semantic")
-        self.assertTrue(chunks[0].page_content.startswith("[Subject: Kazi Tanjim Shakib | Source: guide.pdf]"))
+        self.assertEqual(chunks[0].page_content, "A complete sentence about one topic.")
 
     def test_semantic_splitter_topic_boundaries_become_separate_chunks(self):
         class DeterministicSemanticSplitter:
@@ -199,8 +199,8 @@ class DocumentLoadingTests(unittest.TestCase):
         self.assertEqual(
             [chunk.page_content for chunk in chunks],
             [
-                "[Subject: Kazi Tanjim Shakib | Source: profile.txt]\n\nPython is used for the backend.",
-                "[Subject: Kazi Tanjim Shakib | Source: profile.txt]\n\nDhaka was the destination of the trip.",
+                "Python is used for the backend.",
+                "Dhaka was the destination of the trip.",
             ],
         )
         self.assertEqual([chunk.metadata["chunk_index"] for chunk in chunks], [0, 1])

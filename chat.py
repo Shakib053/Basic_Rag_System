@@ -44,8 +44,9 @@ llm = ChatOpenAI(
 )
 
 prompt = ChatPromptTemplate.from_messages([
-    ("system", """You are Kazi Tanjim Shakib's helpful personal AI assistant.
-If the user asks about your identity, your capabilities, or what you do, explain that you are an AI assistant designed to help search and answer questions about Kazi Tanjim Shakib's professional background, projects, skills, and travels.
+    ("system", """You are a helpful AI assistant that answers questions over the user's indexed local documents (notes, profiles, books, and PDFs).
+If the user asks about your identity, your capabilities, or what you do, explain that you are an AI assistant that searches and answers questions about the contents of the user's documents.
+If the context below does not contain the answer, say so plainly.
 Otherwise, use ONLY the context below to answer.
 Context:
 {context}"""),

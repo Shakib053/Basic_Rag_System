@@ -1,10 +1,11 @@
 # Local Personal RAG Assistant
 
-A small terminal-based personal RAG assistant for asking questions over local files. It indexes text and text-based PDFs, retrieves relevant context with hybrid search, optionally retrieves PDF image references, and answers through a Hugging Face Router-compatible chat model.
+A small terminal-based RAG assistant for asking questions over local files — personal notes, profiles, books, or any text-based PDF. It indexes text and text-based PDFs, retrieves relevant context with hybrid search, optionally retrieves PDF image references, and answers through a Hugging Face Router-compatible chat model.
 
 ## Features
 
 - Ingests `.txt` and text-extractable `.pdf` files from `data/`
+- Stores chunks as pure document content; source file and page live in chunk metadata
 - Uses semantic chunking by default, with recursive chunking available through `CHUNKING_STRATEGY=recursive`
 - Stores text embeddings in ChromaDB at `chroma_db/`
 - Combines Chroma MMR semantic retrieval with BM25 keyword retrieval
@@ -110,4 +111,8 @@ Type `exit` to quit.
 - BM25 keyword retrieval returns `k=12` candidates
 - The ensemble retriever uses equal semantic and keyword weights
 - The top 5 reranked text chunks are sent to the chat model
+- Chunk embeddings are computed over pure content; `[Source: … | page N]` citation headers are rendered from metadata only when the answer context is built, after reranking
+- Query rewriting resolves follow-up references and expands synonyms; it does not inject any fixed subject name, so retrieval ranks on actual content relevance
 - Image retrieval returns up to 3 image references when `image_chroma_db/` exists
+
+After changing ingestion behavior or adding files to `data/`, re-run `python ingestion.py` to rebuild the index.

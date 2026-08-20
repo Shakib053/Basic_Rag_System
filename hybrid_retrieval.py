@@ -15,8 +15,6 @@ from sentence_transformers import CrossEncoder
 RERANKER_MODEL_NAME = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 SUPPORTED_FILE_TYPES = {".txt", ".pdf"}
 
-DEFAULT_SUBJECT = "Kazi Tanjim Shakib"
-
 def _clean_pdf_headers(pages: list[Document]) -> list[Document]:
     """Detect and strip repeating header lines across multi-page PDFs."""
     if len(pages) <= 1:
@@ -116,7 +114,6 @@ def split_documents_with_ids(
     splitter,
     *,
     chunking_strategy: str | None = None,
-    subject: str = DEFAULT_SUBJECT,
 ) -> list[Document]:
     chunks: list[Document] = []
     location_counters: dict[str, int] = {}
@@ -124,7 +121,6 @@ def split_documents_with_ids(
     for document in documents:
         document_chunks = splitter.split_documents([document])
         source = document.metadata.get("source", "unknown")
-        file_name = document.metadata.get("file_name", Path(source).name)
         page = document.metadata.get("page")
         location = f"{source}::page-{page}" if page is not None else source
 
@@ -132,13 +128,9 @@ def split_documents_with_ids(
             index = location_counters.get(location, 0)
             location_counters[location] = index + 1
 
-            prefix = f"[Subject: {subject} | Source: {file_name}]\n\n"
-            if not chunk.page_content.startswith("[Subject:"):
-                chunk.page_content = prefix + chunk.page_content.strip()
-
+            chunk.page_content = chunk.page_content.strip()
             chunk.metadata["chunk_index"] = index
             chunk.metadata["chunk_id"] = f"{location}::chunk-{index}"
-            chunk.metadata["subject"] = subject
             if chunking_strategy is not None:
                 chunk.metadata["chunking_strategy"] = chunking_strategy
             chunks.append(chunk)
