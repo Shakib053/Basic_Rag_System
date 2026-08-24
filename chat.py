@@ -17,13 +17,18 @@ from query_enhancement import build_multi_query_retriever, rewrite_query
 
 load_dotenv()
 HF_TOKEN = os.getenv("HF_TOKEN")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 SHOW_RETRIEVED_DOCS = True
 FINAL_CONTEXT_DOCS = 5
 ENABLE_MULTI_QUERY = True
 MULTI_QUERY_COUNT = 3
+OPENROUTER_MODEL = "google/gemma-4-31b-it:free"
 
 if HF_TOKEN:
     os.environ["HUGGINGFACE_HUB_TOKEN"] = HF_TOKEN
+
+if not OPENROUTER_API_KEY:
+    raise ValueError("OPENROUTER_API_KEY is required to use the OpenRouter chat model.")
 
 embedding_model = HuggingFaceEmbeddings(
     model_name="sentence-transformers/all-MiniLM-L6-v2"
@@ -33,14 +38,15 @@ vectorstore = Chroma(
     persist_directory="./chroma_db",
     embedding_function=embedding_model
 )
+
 image_vectorstore = load_image_vectorstore()
 
 llm = ChatOpenAI(
-    model="Qwen/Qwen2.5-72B-Instruct",   # or any supported model
-    openai_api_key=HF_TOKEN or None,
-    openai_api_base="https://router.huggingface.co/v1",
+    model="nvidia/nemotron-3-ultra-550b-a55b:free",
+    api_key=OPENROUTER_API_KEY,
+    base_url="https://openrouter.ai/api/v1",
     temperature=0.7,
-    max_tokens=512,
+    max_tokens=512
 )
 
 prompt = ChatPromptTemplate.from_messages([
