@@ -13,6 +13,7 @@ from image_retrieval import (
     get_image_docs_with_scores,
     load_image_vectorstore,
 )
+
 from query_enhancement import build_multi_query_retriever, rewrite_query
 
 load_dotenv()
@@ -22,7 +23,11 @@ SHOW_RETRIEVED_DOCS = True
 FINAL_CONTEXT_DOCS = 5
 ENABLE_MULTI_QUERY = True
 MULTI_QUERY_COUNT = 3
-OPENROUTER_MODEL = "google/gemma-4-31b-it:free"
+RETRIEVAL_MODEL = "nvidia/nemotron-3-super-120b-a12b:free"
+
+# Can also use "google/gemma-4-31b-it:free"       # fast: query rewriting + multi-query expansion
+
+ANSWER_MODEL = "nvidia/nemotron-3-ultra-550b-a55b:free"  # heavy: final answer generation
 
 if HF_TOKEN:
     os.environ["HUGGINGFACE_HUB_TOKEN"] = HF_TOKEN
@@ -41,8 +46,18 @@ vectorstore = Chroma(
 
 image_vectorstore = load_image_vectorstore()
 
-llm = ChatOpenAI(
-    model="nvidia/nemotron-3-ultra-550b-a55b:free",
+# Lightweight model: query rewriting + multi-query expansion (short output, deterministic)
+retrieval_llm = ChatOpenAI(
+    model="nvidia/nemotron-3-super-120b-a12b:free",
+    api_key=OPENROUTER_API_KEY,
+    base_url="https://openrouter.ai/api/v1",
+    temperature=0.0,
+    max_tokens=256,
+)
+
+# Heavy model: final answer generation (needs best quality)
+answer_llm = ChatOpenAI(
+    model=ANSWER_MODEL,
     api_key=OPENROUTER_API_KEY,
     base_url="https://openrouter.ai/api/v1",
     temperature=0.7,
@@ -110,7 +125,7 @@ hybrid_retriever = build_hybrid_retriever(vectorstore)
 if ENABLE_MULTI_QUERY:
     hybrid_retriever = build_multi_query_retriever(
         hybrid_retriever,
-        llm,
+        retrieval_llm,
         num_queries=MULTI_QUERY_COUNT,
     )
 
@@ -118,7 +133,7 @@ def get_hybrid_docs(query):
     return hybrid_retriever.invoke(query)
 
 def get_rag_response(question, chat_history):
-    standalone = rewrite_query(question, chat_history, llm)
+    standalone = rewrite_query(question, chat_history, retrieval_llm)
 
     print("RAG retrieval query:", standalone)
 
@@ -130,7 +145,7 @@ def get_rag_response(question, chat_history):
     print_retrieved_images(image_results)
     context = build_combined_context(docs, image_results)
 
-    rag_chain = prompt | llm
+    rag_chain = prompt | answer_llm
     response = rag_chain.invoke({
         "context": context,
         "question": question,
