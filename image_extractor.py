@@ -13,7 +13,7 @@ This file DOES NOT:
 
 It only extracts images.
 
-The returned metadata will later be used by image_ingestion.py.
+The returned metadata will later be used by ingestion/image_pipeline.py.
 """
 
 from __future__ import annotations

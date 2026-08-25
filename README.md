@@ -18,13 +18,13 @@ A small terminal-based RAG assistant for asking questions over local files — p
 
 ```text
 data/
-  -> ingestion.py
+  -> ingestion/run.py (text pipeline)
   -> semantic or recursive chunking
   -> text embeddings
   -> chroma_db/
 
 PDF images
-  -> image_ingestion.py
+  -> ingestion/run.py (image pipeline)
   -> data/extracted_images/
   -> CLIP embeddings
   -> image_chroma_db/
@@ -45,10 +45,15 @@ Image support retrieves image file references from PDFs. It does not perform ful
 ```text
 .
 ├── chat.py
-├── ingestion.py
-├── image_ingestion.py
+├── ingestion/
+│   ├── __init__.py
+│   ├── run.py              # single entry point
+│   ├── text_pipeline.py
+│   ├── image_pipeline.py
+│   └── store.py
 ├── hybrid_retrieval.py
 ├── image_retrieval.py
+├── image_extractor.py
 ├── query_enhancement.py
 ├── context_formatting.py
 ├── recursive_chunking.py
@@ -84,17 +89,22 @@ There is no `requirements.txt` yet, so dependencies are installed directly for n
 
 ## Usage
 
-Build the text index:
+Build the indexes (text + images):
 
 ```bash
-python ingestion.py
+python -m ingestion.run
 ```
 
-
-Optionally build the PDF image index:
+Build only the text index:
 
 ```bash
-python image_ingestion.py
+python -m ingestion.run --text-only
+```
+
+Optionally build only the PDF image index:
+
+```bash
+python -m ingestion.run --images-only
 ```
 
 Start the terminal chat:
@@ -115,4 +125,4 @@ Type `exit` to quit.
 - Query rewriting resolves follow-up references and expands synonyms; it does not inject any fixed subject name, so retrieval ranks on actual content relevance
 - Image retrieval returns up to 3 image references when `image_chroma_db/` exists
 
-After changing ingestion behavior or adding files to `data/`, re-run `python ingestion.py` to rebuild the index.
+After changing ingestion behavior or adding files to `data/`, re-run `python -m ingestion.run` to rebuild the indexes.

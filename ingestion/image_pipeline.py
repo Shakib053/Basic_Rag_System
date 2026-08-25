@@ -1,8 +1,20 @@
+"""
+ingestion/image_pipeline.py
+
+Image ingestion pipeline.
+
+Walks every PDF in the data directory, extracts embedded images via
+image_extractor, embeds each image with CLIP, and stores the vectors in a
+dedicated Chroma database.
+"""
+from __future__ import annotations
+
 from pathlib import Path
 from typing import Sequence
 
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
+
 from image_extractor import extract_images_from_pdf
 from embeddings.clip_embeddings import CLIPEmbeddings
 
@@ -11,35 +23,27 @@ PDF_DIR = Path("data")
 IMAGE_OUTPUT_DIR = Path("data/extracted_images")
 IMAGE_PERSIST_DIR = Path("image_chroma_db")
 
+
 def load_image_documents() -> list[Document]:
     """
-    Go through every PDF inside the data folder.
-
-    Extract every image.
-
-    Convert every extracted image into a LangChain Document.
+    Walk every PDF inside *PDF_DIR*, extract all embedded images, and return
+    one LangChain ``Document`` per image.
 
     Returns
     -------
     list[Document]
+        Each document's ``page_content`` is the image file path; metadata
+        carries ``source``, ``page``, ``image_index``, ``image_path``, and
+        ``file_type``.
     """
-
     documents: list[Document] = []
 
-    # Find every PDF inside the data directory.
     pdf_files = sorted(PDF_DIR.glob("*.pdf"))
 
     for pdf_path in pdf_files:
+        extracted_images = extract_images_from_pdf(pdf_path, IMAGE_OUTPUT_DIR)
 
-        # Extract all images from this PDF.
-        extracted_images = extract_images_from_pdf(
-            pdf_path,
-            IMAGE_OUTPUT_DIR,
-        )
-
-        # Create one Document per image.
         for image in extracted_images:
-
             document = Document(
                 page_content=str(image["image_path"]),
                 metadata={
@@ -50,19 +54,16 @@ def load_image_documents() -> list[Document]:
                     "file_type": "image",
                 },
             )
-
             documents.append(document)
 
     return documents
+
 
 def build_image_vector_store(
     documents: Sequence[Document],
     persist_dir: Path,
 ) -> None:
-    """
-    Build a Chroma vector store containing image embeddings.
-    """
-
+    """Build a Chroma vector store containing CLIP image embeddings."""
     embedding_model = CLIPEmbeddings()
 
     Chroma.from_documents(
@@ -72,27 +73,22 @@ def build_image_vector_store(
     )
 
 
+def run_image_pipeline() -> bool:
+    """
+    Build / rebuild the image Chroma vector store.
 
-def main():
-
-    # Step 1
+    Returns
+    -------
+    bool
+        ``True`` if the store was rebuilt, ``False`` if skipped because no
+        images were found in any PDF.
+    """
     image_documents = load_image_documents()
 
-    # Step 2
     if not image_documents:
-        raise RuntimeError("No images were found.")
+        print("⚠  No images found in PDFs — skipping image pipeline.")
+        return False
 
-    # Step 3
-    build_image_vector_store(
-        image_documents,
-        IMAGE_PERSIST_DIR,
-    )
-
-    print(
-        f"Stored {len(image_documents)} images into "
-        f"{IMAGE_PERSIST_DIR}"
-    )
-
-
-if __name__ == "__main__":
-    main()
+    build_image_vector_store(image_documents, IMAGE_PERSIST_DIR)
+    print(f"Stored {len(image_documents)} images into {IMAGE_PERSIST_DIR}")
+    return True

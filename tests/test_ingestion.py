@@ -4,20 +4,22 @@ import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from ingestion import (
+from ingestion.text_pipeline import (
     build_chunker,
     get_chunking_strategy,
+)
+from ingestion.store import (
     rebuild_vector_store,
-    replace_vector_store
+    replace_vector_store,
 )
 
 class ChunkerConfigurationTests(unittest.TestCase):
-    @patch.dict("ingestion.os.environ", {}, clear=True)
+    @patch.dict("ingestion.text_pipeline.os.environ", {}, clear=True)
     def test_semantic_chunking_is_default(self):
         self.assertEqual(get_chunking_strategy(), "semantic")
 
     @patch.dict(
-        "ingestion.os.environ",
+        "ingestion.text_pipeline.os.environ",
         {"CHUNKING_STRATEGY": "semantic"},
         clear=True,
     )
@@ -25,14 +27,14 @@ class ChunkerConfigurationTests(unittest.TestCase):
         self.assertEqual(get_chunking_strategy(), "semantic")
 
     @patch.dict(
-        "ingestion.os.environ",
+        "ingestion.text_pipeline.os.environ",
         {"CHUNKING_STRATEGY": "recursive"},
         clear=True,
     )
     def test_recursive_strategy_can_be_selected_from_environment(self):
         self.assertEqual(get_chunking_strategy(), "recursive")
 
-    @patch("ingestion.build_recursive_chunker")
+    @patch("ingestion.text_pipeline.build_recursive_chunker")
     def test_recursive_strategy_routes_to_recursive_chunker(self, builder):
         recursive_chunker = Mock()
         builder.return_value = recursive_chunker
@@ -46,7 +48,7 @@ class ChunkerConfigurationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Unsupported CHUNKING_STRATEGY"):
             get_chunking_strategy("fixed")
 
-    @patch("ingestion._load_semantic_chunker_class")
+    @patch("ingestion.text_pipeline._load_semantic_chunker_class")
     def test_semantic_chunker_uses_expected_configuration(self, loader):
         semantic_chunker = Mock()
         loader.return_value = semantic_chunker
@@ -117,7 +119,7 @@ class FailureSafeIngestionTests(unittest.TestCase):
                     raise OSError("swap failed")
                 return real_rename(source, destination)
 
-            with patch("ingestion._rename_path", side_effect=fail_second_rename):
+            with patch("ingestion.store._rename_path", side_effect=fail_second_rename):
                 with self.assertRaisesRegex(OSError, "swap failed"):
                     replace_vector_store(staging, live)
 
