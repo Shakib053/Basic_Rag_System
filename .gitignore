@@ -7,3 +7,4 @@ chroma_db/
 .chroma_db.staging-*
 .chroma_db.backup-*
 openRouter_test.py
+image_chroma_db/
