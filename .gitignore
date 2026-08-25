@@ -8,3 +8,4 @@ chroma_db/
 .chroma_db.backup-*
 openRouter_test.py
 image_chroma_db/
+openRouter_test.py
