@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
-from typing import Sequence
+from typing import Any, Sequence
 import warnings
 
-from langchain_chroma import Chroma
 from langchain_community.document_loaders import PyMuPDFLoader
 from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
@@ -137,19 +136,63 @@ def split_documents_with_ids(
 
     return chunks
 
-def _build_bm25_retriever_from_vectorstore(vectorstore: Chroma, *, k: int) -> BM25Retriever:
+def _load_chroma_documents(vectorstore: Any) -> list[Document]:
     stored = vectorstore.get()
-    documents = [
+    return [
         Document(page_content=text, metadata=meta or {})
         for text, meta in zip(stored.get("documents", []), stored.get("metadatas", []))
     ]
 
+
+def _load_qdrant_documents(vectorstore: Any) -> list[Document]:
+    documents: list[Document] = []
+    offset = None
+    content_key = getattr(vectorstore, "content_payload_key", "page_content")
+    metadata_key = getattr(vectorstore, "metadata_payload_key", "metadata")
+
+    while True:
+        points, offset = vectorstore.client.scroll(
+            collection_name=vectorstore.collection_name,
+            limit=100,
+            offset=offset,
+            with_payload=True,
+            with_vectors=False,
+        )
+        for point in points:
+            payload = point.payload or {}
+            content = payload.get(content_key)
+            if not content:
+                continue
+            documents.append(
+                Document(
+                    page_content=content,
+                    metadata=payload.get(metadata_key) or {},
+                )
+            )
+        if offset is None:
+            break
+
+    return documents
+
+
+def _load_documents_from_vectorstore(vectorstore: Any) -> list[Document]:
+    if hasattr(vectorstore, "get"):
+        return _load_chroma_documents(vectorstore)
+
+    if hasattr(vectorstore, "client") and hasattr(vectorstore, "collection_name"):
+        return _load_qdrant_documents(vectorstore)
+
+    raise TypeError("Unsupported vector store: expected Chroma or QdrantVectorStore.")
+
+
+def _build_bm25_retriever_from_vectorstore(vectorstore: Any, *, k: int) -> BM25Retriever:
+    documents = _load_documents_from_vectorstore(vectorstore)
     bm25_retriever = BM25Retriever.from_documents(documents)
     bm25_retriever.k = k
     return bm25_retriever
 
 def build_hybrid_retriever(
-    vectorstore: Chroma,
+    vectorstore: Any,
     *,
     semantic_k: int = 12,
     keyword_k: int = 12,

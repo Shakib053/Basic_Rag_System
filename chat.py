@@ -1,11 +1,10 @@
 import os
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_chroma import Chroma
-from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
 from context_formatting import build_combined_context
+from embeddings.text_embeddings import get_text_embedding_model
 from hybrid_retrieval import build_hybrid_retriever, rerank_documents
 
 from image_retrieval import (
@@ -15,6 +14,7 @@ from image_retrieval import (
 )
 
 from query_enhancement import build_multi_query_retriever, rewrite_query
+from text_vectorstore import load_text_vectorstore
 
 load_dotenv()
 HF_TOKEN = os.getenv("HF_TOKEN")
@@ -35,14 +35,8 @@ if HF_TOKEN:
 if not OPENROUTER_API_KEY:
     raise ValueError("OPENROUTER_API_KEY is required to use the OpenRouter chat model.")
 
-embedding_model = HuggingFaceEmbeddings(
-    model_name="sentence-transformers/all-MiniLM-L6-v2"
-)
-
-vectorstore = Chroma(
-    persist_directory="./chroma_db",
-    embedding_function=embedding_model
-)
+embedding_model = get_text_embedding_model()
+vectorstore = load_text_vectorstore(embedding_model)
 
 image_vectorstore = load_image_vectorstore()
 
