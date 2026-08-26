@@ -26,6 +26,7 @@ from dotenv import load_dotenv
 from ingestion.store import verify_chroma_native_bindings
 from ingestion.text_pipeline import run_text_pipeline
 from ingestion.image_pipeline import run_image_pipeline
+from text_vectorstore import PROVIDER_CHROMA, get_vector_store_provider
 
 
 def _parse_args() -> argparse.Namespace:
@@ -54,9 +55,13 @@ def _parse_args() -> argparse.Namespace:
 
 def main() -> None:
     load_dotenv()
-    verify_chroma_native_bindings()
 
     args = _parse_args()
+
+    uses_chroma_text = not args.images_only and get_vector_store_provider() == PROVIDER_CHROMA
+    uses_chroma_images = not args.text_only
+    if uses_chroma_text or uses_chroma_images:
+        verify_chroma_native_bindings()
 
     if not args.images_only:
         run_text_pipeline(args.strategy)

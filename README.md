@@ -7,8 +7,8 @@ A small terminal-based RAG assistant for asking questions over local files — p
 - Ingests `.txt` and text-extractable `.pdf` files from `data/`
 - Stores chunks as pure document content; source file and page live in chunk metadata
 - Uses semantic chunking by default, with recursive chunking available through `CHUNKING_STRATEGY=recursive`
-- Stores text embeddings in ChromaDB at `chroma_db/`
-- Combines Chroma MMR semantic retrieval with BM25 keyword retrieval
+- Stores text embeddings in ChromaDB at `chroma_db/` by default, with optional Qdrant storage
+- Combines vector-store MMR semantic retrieval with BM25 keyword retrieval
 - Rewrites follow-up questions and expands queries with multi-query retrieval
 - Reranks retrieved text with `cross-encoder/ms-marco-MiniLM-L-6-v2`
 - Optionally extracts PDF images and stores CLIP image embeddings in `image_chroma_db/`
@@ -21,7 +21,7 @@ data/
   -> ingestion/run.py (text pipeline)
   -> semantic or recursive chunking
   -> text embeddings
-  -> chroma_db/
+  -> chroma_db/ or Qdrant collection
 
 PDF images
   -> ingestion/run.py (image pipeline)
@@ -60,7 +60,7 @@ Image support retrieves image file references from PDFs. It does not perform ful
 ├── embeddings/
 ├── tests/
 ├── data/
-├── chroma_db/              # generated text vector store
+├── chroma_db/              # generated text vector store when using Chroma
 └── image_chroma_db/        # generated image vector store
 ```
 
@@ -75,6 +75,7 @@ Create a local `.env` file:
 
 ```text
 HF_TOKEN=your_hugging_face_token_here
+VECTOR_STORE_PROVIDER=chroma
 ```
 
 Create a virtual environment and install dependencies:
@@ -82,12 +83,28 @@ Create a virtual environment and install dependencies:
 ```bash
 python -m venv venv
 source venv/bin/activate
-pip install langchain langchain-classic langchain-community langchain-chroma langchain-experimental langchain-huggingface langchain-openai langchain-text-splitters python-dotenv chromadb sentence-transformers pypdf pymupdf
+pip install langchain langchain-classic langchain-community langchain-chroma langchain-qdrant langchain-experimental langchain-huggingface langchain-openai langchain-text-splitters python-dotenv chromadb qdrant-client sentence-transformers pypdf pymupdf
 ```
 
 There is no `requirements.txt` yet, so dependencies are installed directly for now.
 
 ## Usage
+
+Text retrieval uses Chroma unless `VECTOR_STORE_PROVIDER=qdrant` is set.
+To use Qdrant for text chunks, add these values to `.env`:
+
+```text
+VECTOR_STORE_PROVIDER=qdrant
+QDRANT_URL=your_qdrant_url_here
+QDRANT_API_KEY=your_qdrant_api_key_here
+QDRANT_TEXT_COLLECTION=rag_text
+```
+
+To roll back to local Chroma, set:
+
+```text
+VECTOR_STORE_PROVIDER=chroma
+```
 
 Build the indexes (text + images):
 
@@ -117,7 +134,7 @@ Type `exit` to quit.
 
 ## Retrieval Notes
 
-- Chroma semantic retrieval uses MMR with `k=12`, `fetch_k=20`, and `lambda_mult=0.5`
+- Semantic retrieval uses MMR with `k=12`, `fetch_k=20`, and `lambda_mult=0.5`
 - BM25 keyword retrieval returns `k=12` candidates
 - The ensemble retriever uses equal semantic and keyword weights
 - The top 5 reranked text chunks are sent to the chat model

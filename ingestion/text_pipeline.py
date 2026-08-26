@@ -17,11 +17,17 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from hybrid_retrieval import load_documents, split_documents_with_ids
 from recursive_chunking import RECURSIVE_STRATEGY, build_recursive_chunker
 from embeddings.text_embeddings import get_text_embedding_model
-from ingestion.store import rebuild_vector_store
+from text_vectorstore import (
+    DEFAULT_TEXT_PERSIST_DIR,
+    PROVIDER_QDRANT,
+    get_qdrant_collection_name,
+    get_vector_store_provider,
+    rebuild_text_vectorstore,
+)
 
 
 DATA_DIR = Path("data")
-PERSIST_DIR = Path("chroma_db")
+PERSIST_DIR = DEFAULT_TEXT_PERSIST_DIR
 
 DEFAULT_CHUNKING_STRATEGY = "semantic"
 SUPPORTED_CHUNKING_STRATEGIES = {DEFAULT_CHUNKING_STRATEGY, RECURSIVE_STRATEGY}
@@ -76,7 +82,7 @@ def build_chunker(strategy: str, embedding_model: HuggingFaceEmbeddings):
 
 def run_text_pipeline(strategy: str | None = None) -> bool:
     """
-    Build / rebuild the text Chroma vector store.
+    Build / rebuild the configured text vector store.
 
     Parameters
     ----------
@@ -120,6 +126,11 @@ def run_text_pipeline(strategy: str | None = None) -> bool:
     )
     print(f"Created {len(chunks)} chunks using {strategy} chunking")
 
-    rebuild_vector_store(chunks, embedding_model, PERSIST_DIR)
-    print(f"Text data stored in ChromaDB at {PERSIST_DIR}")
+    rebuild_text_vectorstore(chunks, embedding_model, persist_dir=PERSIST_DIR)
+
+    provider = get_vector_store_provider()
+    if provider == PROVIDER_QDRANT:
+        print(f"Text data stored in Qdrant collection '{get_qdrant_collection_name()}'")
+    else:
+        print(f"Text data stored in ChromaDB at {PERSIST_DIR}")
     return True

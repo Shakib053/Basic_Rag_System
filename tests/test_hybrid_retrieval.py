@@ -7,6 +7,7 @@ from langchain_core.documents import Document
 
 from hybrid_retrieval import (
     _clean_pdf_headers,
+    _load_qdrant_documents,
     build_hybrid_retriever,
     load_documents,
     split_documents_with_ids,
@@ -62,6 +63,31 @@ class HybridRetrieverConfigurationTests(unittest.TestCase):
             weights=[0.5, 0.5],
         )
         self.assertIs(result, expected_retriever)
+
+    def test_loads_bm25_documents_from_qdrant_payloads(self):
+        point = Mock()
+        point.payload = {
+            "page_content": "Stored text",
+            "metadata": {"file_name": "notes.txt", "chunk_index": 0},
+        }
+        vectorstore = Mock()
+        vectorstore.collection_name = "rag_text"
+        vectorstore.content_payload_key = "page_content"
+        vectorstore.metadata_payload_key = "metadata"
+        vectorstore.client.scroll.return_value = ([point], None)
+
+        documents = _load_qdrant_documents(vectorstore)
+
+        vectorstore.client.scroll.assert_called_once_with(
+            collection_name="rag_text",
+            limit=100,
+            offset=None,
+            with_payload=True,
+            with_vectors=False,
+        )
+        self.assertEqual(len(documents), 1)
+        self.assertEqual(documents[0].page_content, "Stored text")
+        self.assertEqual(documents[0].metadata["file_name"], "notes.txt")
 
 
 class DocumentLoadingTests(unittest.TestCase):
