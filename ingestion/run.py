@@ -26,7 +26,7 @@ from dotenv import load_dotenv
 from ingestion.store import verify_chroma_native_bindings
 from ingestion.text_pipeline import run_text_pipeline
 from ingestion.image_pipeline import run_image_pipeline
-from text_vectorstore import PROVIDER_CHROMA, get_vector_store_provider
+from tests.text_vectorstore import PROVIDER_CHROMA, get_vector_store_provider
 
 
 def _parse_args() -> argparse.Namespace:

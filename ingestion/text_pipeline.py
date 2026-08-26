@@ -17,7 +17,7 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from hybrid_retrieval import load_documents, split_documents_with_ids
 from recursive_chunking import RECURSIVE_STRATEGY, build_recursive_chunker
 from embeddings.text_embeddings import get_text_embedding_model
-from text_vectorstore import (
+from tests.text_vectorstore import (
     DEFAULT_TEXT_PERSIST_DIR,
     PROVIDER_QDRANT,
     get_qdrant_collection_name,

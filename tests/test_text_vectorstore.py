@@ -3,7 +3,7 @@ from unittest.mock import Mock, patch
 
 from langchain_core.documents import Document
 
-from text_vectorstore import (
+from tests.text_vectorstore import (
     PROVIDER_CHROMA,
     PROVIDER_QDRANT,
     _stable_qdrant_id,
