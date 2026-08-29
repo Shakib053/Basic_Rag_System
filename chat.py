@@ -5,7 +5,7 @@ from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
 from context_formatting import build_combined_context
 from embeddings.text_embeddings import get_text_embedding_model
-from hybrid_retrieval import build_hybrid_retriever, rerank_documents
+from hybrid_retrieval import build_hybrid_retriever, select_final_context_documents
 
 from image_retrieval import (
     format_image_references,
@@ -134,7 +134,11 @@ def get_rag_response(question, chat_history):
     candidate_docs = get_hybrid_docs(standalone)
 
     image_results = get_image_docs_with_scores(standalone, image_vectorstore)
-    docs = rerank_documents(standalone, candidate_docs, top_k = FINAL_CONTEXT_DOCS)
+    docs = select_final_context_documents(
+        standalone,
+        candidate_docs,
+        rerank_top_k=FINAL_CONTEXT_DOCS,
+    )
     print_retrieved_docs(docs)
     print_retrieved_images(image_results)
     context = build_combined_context(docs, image_results)

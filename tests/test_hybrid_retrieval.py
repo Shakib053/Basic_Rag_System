@@ -7,10 +7,12 @@ from langchain_core.documents import Document
 
 from hybrid_retrieval import (
     _clean_pdf_headers,
+    _build_bm25_retriever_from_vectorstore,
     _load_qdrant_documents,
     build_hybrid_retriever,
     load_documents,
     split_documents_with_ids,
+    rerank_documents,
 )
 
 
@@ -88,6 +90,55 @@ class HybridRetrieverConfigurationTests(unittest.TestCase):
         self.assertEqual(len(documents), 1)
         self.assertEqual(documents[0].page_content, "Stored text")
         self.assertEqual(documents[0].metadata["file_name"], "notes.txt")
+
+    def test_bm25_can_match_file_name_metadata(self):
+        vectorstore = Mock()
+        vectorstore.get.return_value = {
+            "documents": ["My name is Kazi Tanjim Shakib."],
+            "metadatas": [{"file_name": "Personal_info.txt"}],
+        }
+
+        retriever = _build_bm25_retriever_from_vectorstore(vectorstore, k=1)
+        results = retriever.invoke("personal info")
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(
+            results[0].metadata["_original_page_content"],
+            "My name is Kazi Tanjim Shakib.",
+        )
+
+    @patch("hybrid_retrieval._load_reranker")
+    def test_rerank_uses_metadata_and_restores_original_content(self, load_reranker):
+        reranker = Mock()
+        reranker.predict.return_value = [0.9, 0.1]
+        load_reranker.return_value = reranker
+        document = Document(
+            page_content="Personal_info.txt personal info\n\nMy name is Kazi.",
+            metadata={
+                "file_name": "Personal_info.txt",
+                "chunk_id": "personal-0",
+                "_original_page_content": "My name is Kazi.",
+            },
+        )
+        duplicate = Document(
+            page_content="Personal_info.txt personal info\n\nMy name is Kazi.",
+            metadata={
+                "file_name": "Personal_info.txt",
+                "chunk_id": "personal-0",
+                "_original_page_content": "My name is Kazi.",
+            },
+        )
+        other = Document(
+            page_content="Project text",
+            metadata={"file_name": "Projects.txt", "chunk_id": "projects-0"},
+        )
+
+        results = rerank_documents("personal info", [document, duplicate, other])
+
+        self.assertEqual(len(results), 2)
+        self.assertEqual(results[0].page_content, "My name is Kazi.")
+        self.assertNotIn("_original_page_content", results[0].metadata)
+        self.assertIn("Personal_info.txt", reranker.predict.call_args.args[0][0][1])
 
 
 class DocumentLoadingTests(unittest.TestCase):

@@ -13,6 +13,7 @@ from sentence_transformers import CrossEncoder
 
 RERANKER_MODEL_NAME = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 SUPPORTED_FILE_TYPES = {".txt", ".pdf"}
+ORIGINAL_PAGE_CONTENT_KEY = "_original_page_content"
 
 def _clean_pdf_headers(pages: list[Document]) -> list[Document]:
     """Detect and strip repeating header lines across multi-page PDFs."""
@@ -185,8 +186,37 @@ def _load_documents_from_vectorstore(vectorstore: Any) -> list[Document]:
     raise TypeError("Unsupported vector store: expected Chroma or QdrantVectorStore.")
 
 
+def _metadata_search_terms(document: Document) -> str:
+    metadata = document.metadata
+    values = [
+        metadata.get("file_name"),
+        metadata.get("source"),
+        metadata.get("file_type"),
+    ]
+    terms = []
+    for value in values:
+        if not value:
+            continue
+        text = str(value)
+        terms.append(text)
+        terms.append(Path(text).stem.replace("_", " "))
+    return " ".join(terms)
+
+
+def _document_for_keyword_search(document: Document) -> Document:
+    metadata = dict(document.metadata)
+    metadata[ORIGINAL_PAGE_CONTENT_KEY] = document.page_content
+    retrieval_text = (
+        f"{_metadata_search_terms(document)}\n\n{document.page_content}"
+    ).strip()
+    return Document(page_content=retrieval_text, metadata=metadata)
+
+
 def _build_bm25_retriever_from_vectorstore(vectorstore: Any, *, k: int) -> BM25Retriever:
-    documents = _load_documents_from_vectorstore(vectorstore)
+    documents = [
+        _document_for_keyword_search(document)
+        for document in _load_documents_from_vectorstore(vectorstore)
+    ]
     bm25_retriever = BM25Retriever.from_documents(documents)
     bm25_retriever.k = k
     return bm25_retriever
@@ -228,12 +258,31 @@ def rerank_documents(
     if not documents:
         return []
 
+    unique_documents: list[Document] = []
+    seen_documents = set()
+    for document in documents:
+        original_content = document.metadata.pop(
+            ORIGINAL_PAGE_CONTENT_KEY,
+            document.page_content,
+        )
+        document.page_content = original_content
+        identity = _document_identity(document)
+        if identity == (None, None, None):
+            identity = (None, None, hash(document.page_content))
+        if identity in seen_documents:
+            continue
+        seen_documents.add(identity)
+        unique_documents.append(document)
+
     reranker = _load_reranker(model_name)
-    pairs = [(query, document.page_content) for document in documents]
+    pairs = [
+        (query, f"{_metadata_search_terms(document)}\n\n{document.page_content}".strip())
+        for document in unique_documents
+    ]
     scores = reranker.predict(pairs)
 
     scored_documents = sorted(
-        zip(documents, scores),
+        zip(unique_documents, scores),
         key=lambda item: float(item[1]),
         reverse=True,
     )
