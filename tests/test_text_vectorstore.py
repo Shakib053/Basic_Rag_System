@@ -1,33 +1,13 @@
 import unittest
-from unittest.mock import Mock, patch
 
 from langchain_core.documents import Document
 
-from tests.text_vectorstore import (
-    PROVIDER_CHROMA,
-    PROVIDER_QDRANT,
+from ingestion.text_vectorstore import (
     _stable_qdrant_id,
-    get_vector_store_provider,
 )
 
 
-class TextVectorStoreProviderTests(unittest.TestCase):
-    @patch.dict("text_vectorstore.os.environ", {}, clear=True)
-    def test_chroma_is_default_provider(self):
-        self.assertEqual(get_vector_store_provider(), PROVIDER_CHROMA)
-
-    @patch.dict(
-        "text_vectorstore.os.environ",
-        {"VECTOR_STORE_PROVIDER": "qdrant"},
-        clear=True,
-    )
-    def test_qdrant_provider_can_be_selected_from_environment(self):
-        self.assertEqual(get_vector_store_provider(), PROVIDER_QDRANT)
-
-    def test_invalid_provider_is_rejected(self):
-        with self.assertRaisesRegex(ValueError, "Unsupported VECTOR_STORE_PROVIDER"):
-            get_vector_store_provider("sqlite")
-
+class TextVectorStoreTests(unittest.TestCase):
     def test_qdrant_ids_are_stable_for_chunk_id(self):
         document = Document(
             page_content="Text",

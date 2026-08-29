@@ -245,3 +245,39 @@ def rerank_documents(
         reranked_documents.append(document)
 
     return reranked_documents
+
+
+def _document_identity(document: Document) -> tuple[str | None, str | None, int | None]:
+    metadata = document.metadata
+    return (
+        metadata.get("chunk_id"),
+        metadata.get("source"),
+        metadata.get("chunk_index"),
+    )
+
+
+def select_final_context_documents(
+    query: str,
+    candidate_documents: Sequence[Document],
+    *,
+    rerank_top_k: int = 5,
+    preserve_top_k: int = 2,
+) -> list[Document]:
+    """Return reranked documents plus the strongest first-pass retrieval hits."""
+    reranked_documents = rerank_documents(
+        query,
+        candidate_documents,
+        top_k=rerank_top_k,
+    )
+
+    selected_documents = list(reranked_documents)
+    selected_ids = {_document_identity(document) for document in selected_documents}
+
+    for document in candidate_documents[:preserve_top_k]:
+        identity = _document_identity(document)
+        if identity in selected_ids:
+            continue
+        selected_documents.append(document)
+        selected_ids.add(identity)
+
+    return selected_documents

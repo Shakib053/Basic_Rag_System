@@ -7,7 +7,7 @@ A small terminal-based RAG assistant for asking questions over local files — p
 - Ingests `.txt` and text-extractable `.pdf` files from `data/`
 - Stores chunks as pure document content; source file and page live in chunk metadata
 - Uses semantic chunking by default, with recursive chunking available through `CHUNKING_STRATEGY=recursive`
-- Stores text embeddings in ChromaDB at `chroma_db/` by default, with optional Qdrant storage
+- Stores text embeddings in Qdrant
 - Combines vector-store MMR semantic retrieval with BM25 keyword retrieval
 - Rewrites follow-up questions and expands queries with multi-query retrieval
 - Reranks retrieved text with `cross-encoder/ms-marco-MiniLM-L-6-v2`
@@ -21,7 +21,7 @@ data/
   -> ingestion/run.py (text pipeline)
   -> semantic or recursive chunking
   -> text embeddings
-  -> chroma_db/ or Qdrant collection
+  -> Qdrant collection
 
 PDF images
   -> ingestion/run.py (image pipeline)
@@ -32,7 +32,7 @@ PDF images
 question
   -> chat.py
   -> query rewrite + multi-query expansion
-  -> hybrid retrieval: Chroma MMR + BM25
+  -> hybrid retrieval: vector-store MMR + BM25
   -> cross-encoder reranking
   -> combined text + image-reference context
   -> grounded answer
@@ -49,6 +49,7 @@ Image support retrieves image file references from PDFs. It does not perform ful
 │   ├── __init__.py
 │   ├── run.py              # single entry point
 │   ├── text_pipeline.py
+│   ├── text_vectorstore.py
 │   ├── image_pipeline.py
 │   └── store.py
 ├── hybrid_retrieval.py
@@ -60,7 +61,6 @@ Image support retrieves image file references from PDFs. It does not perform ful
 ├── embeddings/
 ├── tests/
 ├── data/
-├── chroma_db/              # generated text vector store when using Chroma
 └── image_chroma_db/        # generated image vector store
 ```
 
@@ -75,7 +75,9 @@ Create a local `.env` file:
 
 ```text
 HF_TOKEN=your_hugging_face_token_here
-VECTOR_STORE_PROVIDER=chroma
+QDRANT_URL=your_qdrant_url_here
+QDRANT_API_KEY=your_qdrant_api_key_here
+QDRANT_TEXT_COLLECTION=rag_text
 ```
 
 Create a virtual environment and install dependencies:
@@ -90,20 +92,12 @@ There is no `requirements.txt` yet, so dependencies are installed directly for n
 
 ## Usage
 
-Text retrieval uses Chroma unless `VECTOR_STORE_PROVIDER=qdrant` is set.
-To use Qdrant for text chunks, add these values to `.env`:
+Text retrieval uses Qdrant. Add these values to `.env`:
 
 ```text
-VECTOR_STORE_PROVIDER=qdrant
 QDRANT_URL=your_qdrant_url_here
 QDRANT_API_KEY=your_qdrant_api_key_here
 QDRANT_TEXT_COLLECTION=rag_text
-```
-
-To roll back to local Chroma, set:
-
-```text
-VECTOR_STORE_PROVIDER=chroma
 ```
 
 Build the indexes (text + images):

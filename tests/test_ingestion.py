@@ -134,37 +134,7 @@ class IngestionEntrypointTests(unittest.TestCase):
     @patch("ingestion.run.verify_chroma_native_bindings")
     @patch("ingestion.run.load_dotenv")
     @patch("sys.argv", ["ingestion.run", "--text-only"])
-    @patch.dict(
-        "text_vectorstore.os.environ",
-        {"VECTOR_STORE_PROVIDER": "chroma"},
-        clear=True,
-    )
-    def test_text_only_chroma_verifies_chroma_bindings(
-        self,
-        _load_dotenv,
-        verify_chroma,
-        run_text,
-        run_image,
-    ):
-        from ingestion.run import main
-
-        main()
-
-        verify_chroma.assert_called_once_with()
-        run_text.assert_called_once_with(None)
-        run_image.assert_not_called()
-
-    @patch("ingestion.run.run_image_pipeline")
-    @patch("ingestion.run.run_text_pipeline")
-    @patch("ingestion.run.verify_chroma_native_bindings")
-    @patch("ingestion.run.load_dotenv")
-    @patch("sys.argv", ["ingestion.run", "--text-only"])
-    @patch.dict(
-        "text_vectorstore.os.environ",
-        {"VECTOR_STORE_PROVIDER": "qdrant"},
-        clear=True,
-    )
-    def test_text_only_qdrant_skips_chroma_binding_check(
+    def test_text_only_skips_chroma_binding_check(
         self,
         _load_dotenv,
         verify_chroma,
@@ -178,6 +148,26 @@ class IngestionEntrypointTests(unittest.TestCase):
         verify_chroma.assert_not_called()
         run_text.assert_called_once_with(None)
         run_image.assert_not_called()
+
+    @patch("ingestion.run.run_image_pipeline")
+    @patch("ingestion.run.run_text_pipeline")
+    @patch("ingestion.run.verify_chroma_native_bindings")
+    @patch("ingestion.run.load_dotenv")
+    @patch("sys.argv", ["ingestion.run"])
+    def test_full_ingestion_verifies_chroma_bindings_for_images(
+        self,
+        _load_dotenv,
+        verify_chroma,
+        run_text,
+        run_image,
+    ):
+        from ingestion.run import main
+
+        main()
+
+        verify_chroma.assert_called_once_with()
+        run_text.assert_called_once_with(None)
+        run_image.assert_called_once_with()
 
 
 if __name__ == "__main__":

@@ -14,7 +14,7 @@ from image_retrieval import (
 )
 
 from query_enhancement import build_multi_query_retriever, rewrite_query
-from tests.text_vectorstore import load_text_vectorstore
+from ingestion.text_vectorstore import load_text_vectorstore
 
 load_dotenv()
 HF_TOKEN = os.getenv("HF_TOKEN")
