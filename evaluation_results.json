@@ -1,0 +1,70 @@
+{
+  "aggregate_scores": {
+    "faithfulness": {
+      "mean": NaN,
+      "min": NaN,
+      "max": NaN,
+      "count": 2
+    },
+    "context_precision": {
+      "mean": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "count": 2
+    },
+    "context_recall": {
+      "mean": NaN,
+      "min": NaN,
+      "max": NaN,
+      "count": 2
+    },
+    "answer_relevancy": {
+      "mean": NaN,
+      "min": NaN,
+      "max": NaN,
+      "count": 2
+    },
+    "answer_correctness": {
+      "mean": NaN,
+      "min": NaN,
+      "max": NaN,
+      "count": 2
+    }
+  },
+  "per_sample_results": [
+    {
+      "user_input": "What is Kazi Tanjim Shakib's current job title and employer?",
+      "retrieved_contexts": [],
+      "response": "ERROR: Failed to generate response",
+      "reference": "Kazi Tanjim Shakib is a Senior Software Engineer at Samsung R&D Institute Bangladesh Ltd.",
+      "faithfulness": NaN,
+      "context_precision": 0.0,
+      "context_recall": NaN,
+      "answer_relevancy": NaN,
+      "answer_correctness": NaN
+    },
+    {
+      "user_input": "Where is Kazi Tanjim Shakib based?",
+      "retrieved_contexts": [],
+      "response": "ERROR: Failed to generate response",
+      "reference": "Dhaka, Bangladesh",
+      "faithfulness": NaN,
+      "context_precision": 0.0,
+      "context_recall": NaN,
+      "answer_relevancy": NaN,
+      "answer_correctness": NaN
+    }
+  ],
+  "metadata": {
+    "model": "google/gemma-4-31b-it:free",
+    "embeddings": "sentence-transformers/all-MiniLM-L6-v2",
+    "num_samples": 2,
+    "metrics": [
+      "faithfulness",
+      "context_precision",
+      "context_recall",
+      "answer_relevancy",
+      "answer_correctness"
+    ]
+  }
+}
