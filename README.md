@@ -7,11 +7,11 @@ A small terminal-based RAG assistant for asking questions over local files — p
 - Ingests `.txt` and text-extractable `.pdf` files from `data/`
 - Stores chunks as pure document content; source file and page live in chunk metadata
 - Uses semantic chunking by default, with recursive chunking available through `CHUNKING_STRATEGY=recursive`
-- Stores text embeddings in Qdrant
+- Stores text embeddings in Qdrant (text data)
 - Combines vector-store MMR semantic retrieval with BM25 keyword retrieval
 - Rewrites follow-up questions and expands queries with multi-query retrieval
 - Reranks retrieved text with `cross-encoder/ms-marco-MiniLM-L-6-v2`
-- Optionally extracts PDF images and stores CLIP image embeddings in `image_chroma_db/`
+- Optionally extracts PDF images and stores CLIP image embeddings in ChromaDB (`image_chroma_db/` for image data)
 - Builds final context from text chunks plus image references
 
 ## Architecture
@@ -21,13 +21,13 @@ data/
   -> ingestion/run.py (text pipeline)
   -> semantic or recursive chunking
   -> text embeddings
-  -> Qdrant collection
+  -> Qdrant collection (text data)
 
 PDF images
   -> ingestion/run.py (image pipeline)
   -> data/extracted_images/
   -> CLIP embeddings
-  -> image_chroma_db/
+  -> ChromaDB / image_chroma_db/ (image data)
 
 question
   -> chat.py
@@ -61,7 +61,7 @@ Image support retrieves image file references from PDFs. It does not perform ful
 ├── embeddings/
 ├── tests/
 ├── data/
-└── image_chroma_db/        # generated image vector store
+└── image_chroma_db/        # generated ChromaDB vector store (for image data)
 ```
 
 ## Setup
@@ -92,7 +92,7 @@ There is no `requirements.txt` yet, so dependencies are installed directly for n
 
 ## Usage
 
-Text retrieval uses Qdrant. Add these values to `.env`:
+Text retrieval uses Qdrant for text data, while image retrieval uses ChromaDB (`image_chroma_db/`) for image data. Add these Qdrant values to `.env`:
 
 ```text
 QDRANT_URL=your_qdrant_url_here
@@ -128,12 +128,12 @@ Type `exit` to quit.
 
 ## Retrieval Notes
 
-- Semantic retrieval uses MMR with `k=12`, `fetch_k=20`, and `lambda_mult=0.5`
+- Semantic text retrieval uses Qdrant MMR with `k=12`, `fetch_k=20`, and `lambda_mult=0.5`
 - BM25 keyword retrieval returns `k=12` candidates
 - The ensemble retriever uses equal semantic and keyword weights
 - The top 5 reranked text chunks are sent to the chat model
 - Chunk embeddings are computed over pure content; `[Source: … | page N]` citation headers are rendered from metadata only when the answer context is built, after reranking
 - Query rewriting resolves follow-up references and expands synonyms; it does not inject any fixed subject name, so retrieval ranks on actual content relevance
-- Image retrieval returns up to 3 image references when `image_chroma_db/` exists
+- Image retrieval uses ChromaDB (`image_chroma_db/`) to return up to 3 image references when `image_chroma_db/` exists
 
 After changing ingestion behavior or adding files to `data/`, re-run `python -m ingestion.run` to rebuild the indexes.
