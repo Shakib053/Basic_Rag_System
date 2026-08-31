@@ -39,6 +39,7 @@ if _llms_mod and not hasattr(_llms_mod, "VertexAI"):
     _llms_mod.VertexAI = VertexAI
 # --------------------------------------------------------------------------
 
+from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
 from langchain_huggingface import HuggingFaceEmbeddings
 from ragas import evaluate
@@ -235,22 +236,32 @@ def build_evaluation_dataset(json_path: Optional[str] = None) -> EvaluationDatas
 
 def configure_ragas_llm_and_embeddings() -> Dict[str, Any]:
     """
-    Configure RAGAS to use custom LLM (OpenRouter via ChatOpenAI) and embeddings.
+    Configure RAGAS to use custom LLM (Ollama or OpenRouter via ChatOpenAI) and embeddings.
 
     Returns:
         Dict with 'llm' and 'embeddings' keys for passing to evaluate()
     """
-    if not OPENROUTER_API_KEY:
-        raise ValueError("OPENROUTER_API_KEY environment variable is required for RAGAS evaluation")
+    llm_provider = os.getenv("LLM_PROVIDER", "ollama").lower()
+    ollama_model = os.getenv("OLLAMA_MODEL", "qwen3:1.7b")
+    ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 
-    # Custom LLM for RAGAS evaluation metrics
-    eval_llm = ChatOpenAI(
-        model=EVALUATION_MODEL,
-        api_key=OPENROUTER_API_KEY,
-        base_url="https://openrouter.ai/api/v1",
-        temperature=0.0,  # Deterministic for evaluation
-        max_tokens=1024,
-    )
+    if llm_provider == "ollama":
+        eval_llm = ChatOllama(
+            model=ollama_model,
+            base_url=ollama_base_url,
+            temperature=0.0,
+        )
+    else:
+        if not OPENROUTER_API_KEY:
+            raise ValueError("OPENROUTER_API_KEY environment variable is required for RAGAS evaluation with OpenRouter")
+
+        eval_llm = ChatOpenAI(
+            model=EVALUATION_MODEL,
+            api_key=OPENROUTER_API_KEY,
+            base_url="https://openrouter.ai/api/v1",
+            temperature=0.0,  # Deterministic for evaluation
+            max_tokens=1024,
+        )
 
     # Embeddings for RAGAS (used by context_precision/recall for semantic matching)
     eval_embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL_NAME)

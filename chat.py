@@ -1,6 +1,7 @@
 import os
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
 from context_formatting import build_combined_context
@@ -18,7 +19,11 @@ from ingestion.text_vectorstore import load_text_vectorstore
 
 load_dotenv()
 HF_TOKEN = os.getenv("HF_TOKEN")
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "ollama").lower()
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3:1.7b")
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+
 SHOW_RETRIEVED_DOCS = True
 FINAL_CONTEXT_DOCS = 5
 ENABLE_MULTI_QUERY = True
@@ -32,31 +37,39 @@ ANSWER_MODEL = "nvidia/nemotron-3-ultra-550b-a55b:free"  # heavy: final answer g
 if HF_TOKEN:
     os.environ["HUGGINGFACE_HUB_TOKEN"] = HF_TOKEN
 
-if not OPENROUTER_API_KEY:
-    raise ValueError("OPENROUTER_API_KEY is required to use the OpenRouter chat model.")
-
 embedding_model = get_text_embedding_model()
 vectorstore = load_text_vectorstore(embedding_model)
 
 image_vectorstore = load_image_vectorstore()
 
-# Lightweight model: query rewriting + multi-query expansion (short output, deterministic)
-retrieval_llm = ChatOpenAI(
-    model="nvidia/nemotron-3-super-120b-a12b:free",
-    api_key=OPENROUTER_API_KEY,
-    base_url="https://openrouter.ai/api/v1",
-    temperature=0.0,
-    max_tokens=256,
-)
-
-# Heavy model: final answer generation (needs best quality)
-answer_llm = ChatOpenAI(
-    model=ANSWER_MODEL,
-    api_key=OPENROUTER_API_KEY,
-    base_url="https://openrouter.ai/api/v1",
-    temperature=0.7,
-    max_tokens=512
-)
+if LLM_PROVIDER == "ollama":
+    retrieval_llm = ChatOllama(
+        model=OLLAMA_MODEL,
+        base_url=OLLAMA_BASE_URL,
+        temperature=0.0,
+    )
+    answer_llm = ChatOllama(
+        model=OLLAMA_MODEL,
+        base_url=OLLAMA_BASE_URL,
+        temperature=0.7,
+    )
+else:
+    if not OPENROUTER_API_KEY:
+        raise ValueError("OPENROUTER_API_KEY environment variable is required when using OpenRouter.")
+    retrieval_llm = ChatOpenAI(
+        model=RETRIEVAL_MODEL,
+        api_key=OPENROUTER_API_KEY,
+        base_url="https://openrouter.ai/api/v1",
+        temperature=0.0,
+        max_tokens=256,
+    )
+    answer_llm = ChatOpenAI(
+        model=ANSWER_MODEL,
+        api_key=OPENROUTER_API_KEY,
+        base_url="https://openrouter.ai/api/v1",
+        temperature=0.7,
+        max_tokens=512,
+    )
 
 prompt = ChatPromptTemplate.from_messages([
     ("system", """You are a helpful AI assistant that answers questions over the user's indexed local documents (notes, profiles, books, and PDFs).

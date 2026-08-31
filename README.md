@@ -78,6 +78,12 @@ HF_TOKEN=your_hugging_face_token_here
 QDRANT_URL=your_qdrant_url_here
 QDRANT_API_KEY=your_qdrant_api_key_here
 QDRANT_TEXT_COLLECTION=rag_text
+
+# LLM Configuration (ollama or openrouter)
+LLM_PROVIDER=ollama
+OLLAMA_MODEL=qwen3:1.7b
+OLLAMA_BASE_URL=http://localhost:11434/v1
+# OPENROUTER_API_KEY=your_openrouter_api_key_here
 ```
 
 Create a virtual environment and install dependencies:
