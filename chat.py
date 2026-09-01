@@ -23,6 +23,7 @@ LLM_PROVIDER = os.getenv("LLM_PROVIDER", "ollama").lower()
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3:1.7b")
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+LLM_TIMEOUT_SECONDS = int(os.getenv("LLM_TIMEOUT_SECONDS", "60"))
 
 SHOW_RETRIEVED_DOCS = True
 FINAL_CONTEXT_DOCS = 5
@@ -47,11 +48,13 @@ if LLM_PROVIDER == "ollama":
         model=OLLAMA_MODEL,
         base_url=OLLAMA_BASE_URL,
         temperature=0.0,
+        client_kwargs={"timeout": LLM_TIMEOUT_SECONDS},
     )
     answer_llm = ChatOllama(
         model=OLLAMA_MODEL,
         base_url=OLLAMA_BASE_URL,
         temperature=0.7,
+        client_kwargs={"timeout": LLM_TIMEOUT_SECONDS},
     )
 else:
     if not OPENROUTER_API_KEY:
@@ -62,6 +65,8 @@ else:
         base_url="https://openrouter.ai/api/v1",
         temperature=0.0,
         max_tokens=256,
+        timeout=LLM_TIMEOUT_SECONDS,
+        max_retries=1,
     )
     answer_llm = ChatOpenAI(
         model=ANSWER_MODEL,
@@ -69,6 +74,8 @@ else:
         base_url="https://openrouter.ai/api/v1",
         temperature=0.7,
         max_tokens=512,
+        timeout=LLM_TIMEOUT_SECONDS,
+        max_retries=1,
     )
 
 prompt = ChatPromptTemplate.from_messages([
