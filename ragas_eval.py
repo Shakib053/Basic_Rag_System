@@ -16,8 +16,10 @@ from __future__ import annotations
 
 import os
 import json
+import signal
 import sys
 import types
+import time
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass, asdict
@@ -43,6 +45,7 @@ from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
 from langchain_huggingface import HuggingFaceEmbeddings
 from ragas import evaluate
+from ragas.run_config import RunConfig
 from ragas.metrics import (
     faithfulness,
     context_precision,
@@ -60,6 +63,39 @@ from embeddings.text_embeddings import get_text_embedding_model
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 EVALUATION_MODEL = "google/gemma-4-31b-it:free"  # Use heavy model for evaluation
 EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
+RAGAS_TIMEOUT_SECONDS = int(os.getenv("RAGAS_TIMEOUT_SECONDS", "60"))
+RAGAS_MAX_RETRIES = int(os.getenv("RAGAS_MAX_RETRIES", "1"))
+RAGAS_MAX_WORKERS = int(os.getenv("RAGAS_MAX_WORKERS", "1"))
+RAG_PIPELINE_TIMEOUT_SECONDS = int(os.getenv("RAG_PIPELINE_TIMEOUT_SECONDS", "120"))
+
+
+def log_step(message: str) -> None:
+    """Print timestamped progress so a slow provider call is easy to locate."""
+    print(f"[{time.strftime('%H:%M:%S')}] {message}", flush=True)
+
+
+def run_with_timeout(label: str, timeout_seconds: int, func):
+    """Run a blocking stage with a hard timeout."""
+    if timeout_seconds <= 0:
+        return func()
+
+    def handle_timeout(signum, frame):
+        raise TimeoutError(f"{label} timed out after {timeout_seconds}s")
+
+    previous_handler = signal.getsignal(signal.SIGALRM)
+    signal.signal(signal.SIGALRM, handle_timeout)
+    signal.setitimer(signal.ITIMER_REAL, timeout_seconds)
+    try:
+        return func()
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, previous_handler)
+
+
+def invoke_single_query_retriever(query: str):
+    """Use the wrapped base retriever so eval context capture does not call the LLM again."""
+    base_retriever = getattr(hybrid_retriever, "retriever", hybrid_retriever)
+    return base_retriever.invoke(query)
 
 
 @dataclass
@@ -171,50 +207,85 @@ def load_evaluation_samples(json_path: Optional[str] = None) -> List[EvaluationS
     return EVALUATION_SAMPLES
 
 
-def build_evaluation_dataset(json_path: Optional[str] = None) -> EvaluationDataset:
+def build_evaluation_dataset(
+    json_path: Optional[str] = None,
+    sample_limit: Optional[int] = None,
+) -> EvaluationDataset:
     """
     Run the RAG pipeline on each evaluation question and build a RAGAS EvaluationDataset.
 
     Args:
         json_path: Optional path to JSON file with evaluation samples
+        sample_limit: Optional number of samples to run before building the dataset
 
     Returns:
         EvaluationDataset: Dataset with SingleTurnSample objects containing
         user_input, response, retrieved_contexts, and reference (ground_truth)
     """
     eval_samples = load_evaluation_samples(json_path)
-    print(f"Building evaluation dataset by running RAG pipeline on {len(eval_samples)} questions...")
+    if sample_limit:
+        eval_samples = eval_samples[:sample_limit]
+        log_step(f"Limited to first {sample_limit} samples for testing")
+
+    log_step(f"Building evaluation dataset by running RAG pipeline on {len(eval_samples)} questions...")
 
     samples: List[SingleTurnSample] = []
     chat_history = []  # Fresh history for each evaluation
 
     for idx, eval_sample in enumerate(eval_samples):
-        print(f"\n[{idx + 1}/{len(eval_samples)}] Evaluating: {eval_sample.question[:60]}...")
+        log_step(f"\n[{idx + 1}/{len(eval_samples)}] Evaluating: {eval_sample.question[:60]}...")
 
         # Get RAG response (this runs the full pipeline: rewrite -> retrieve -> rerank -> generate)
         try:
-            response = get_rag_response(eval_sample.question, chat_history)
+            started = time.perf_counter()
+            log_step("  Generating RAG response...")
+            response = run_with_timeout(
+                "RAG response generation",
+                RAG_PIPELINE_TIMEOUT_SECONDS,
+                lambda: get_rag_response(eval_sample.question, chat_history),
+            )
+            log_step(f"  RAG response generated in {time.perf_counter() - started:.1f}s")
         except Exception as e:
-            print(f"  ERROR generating response: {e}")
+            log_step(f"  ERROR generating response: {e}")
             response = "ERROR: Failed to generate response"
 
         # Get retrieved contexts for context-based metrics
         # We need to manually run retrieval to capture the contexts
         from query_enhancement import rewrite_query
         from chat import retrieval_llm, FINAL_CONTEXT_DOCS, image_vectorstore, get_image_docs_with_scores
-        from image_retrieval import format_image_references
-        from context_formatting import build_combined_context
 
         try:
-            standalone = rewrite_query(eval_sample.question, chat_history, retrieval_llm)
-            candidate_docs = hybrid_retriever.invoke(standalone)
-            image_results = get_image_docs_with_scores(standalone, image_vectorstore)
-            docs = rerank_documents(standalone, candidate_docs, top_k=FINAL_CONTEXT_DOCS)
+            started = time.perf_counter()
+            log_step("  Rewriting query for context capture...")
+            standalone = run_with_timeout(
+                "query rewrite",
+                RAG_PIPELINE_TIMEOUT_SECONDS,
+                lambda: rewrite_query(eval_sample.question, chat_history, retrieval_llm),
+            )
+            log_step("  Retrieving text contexts...")
+            candidate_docs = run_with_timeout(
+                "text context retrieval",
+                RAG_PIPELINE_TIMEOUT_SECONDS,
+                lambda: invoke_single_query_retriever(standalone),
+            )
+            log_step("  Retrieving image contexts...")
+            image_results = run_with_timeout(
+                "image context retrieval",
+                RAG_PIPELINE_TIMEOUT_SECONDS,
+                lambda: get_image_docs_with_scores(standalone, image_vectorstore),
+            )
+            log_step("  Reranking text contexts...")
+            docs = run_with_timeout(
+                "text context reranking",
+                RAG_PIPELINE_TIMEOUT_SECONDS,
+                lambda: rerank_documents(standalone, candidate_docs, top_k=FINAL_CONTEXT_DOCS),
+            )
+            log_step(f"  Context capture completed in {time.perf_counter() - started:.1f}s")
 
             # Extract context texts for RAGAS
             retrieved_contexts = [doc.page_content for doc in docs]
         except Exception as e:
-            print(f"  ERROR retrieving contexts: {e}")
+            log_step(f"  ERROR retrieving contexts: {e}")
             retrieved_contexts = []
 
         # Create SingleTurnSample for RAGAS
@@ -226,11 +297,11 @@ def build_evaluation_dataset(json_path: Optional[str] = None) -> EvaluationDatas
         )
         samples.append(sample)
 
-        print(f"  Response: {response[:100]}...")
-        print(f"  Contexts retrieved: {len(retrieved_contexts)}")
+        log_step(f"  Response: {response[:100]}...")
+        log_step(f"  Contexts retrieved: {len(retrieved_contexts)}")
 
     dataset = EvaluationDataset(samples=samples)
-    print(f"\n✓ Built evaluation dataset with {len(samples)} samples")
+    log_step(f"\n✓ Built evaluation dataset with {len(samples)} samples")
     return dataset
 
 
@@ -250,6 +321,7 @@ def configure_ragas_llm_and_embeddings() -> Dict[str, Any]:
             model=ollama_model,
             base_url=ollama_base_url,
             temperature=0.0,
+            client_kwargs={"timeout": RAGAS_TIMEOUT_SECONDS},
         )
     else:
         if not OPENROUTER_API_KEY:
@@ -261,6 +333,8 @@ def configure_ragas_llm_and_embeddings() -> Dict[str, Any]:
             base_url="https://openrouter.ai/api/v1",
             temperature=0.0,  # Deterministic for evaluation
             max_tokens=1024,
+            timeout=RAGAS_TIMEOUT_SECONDS,
+            max_retries=RAGAS_MAX_RETRIES,
         )
 
     # Embeddings for RAGAS (used by context_precision/recall for semantic matching)
@@ -312,6 +386,12 @@ def run_ragas_evaluation(
         metrics=metrics,
         llm=ragas_config["llm"],
         embeddings=ragas_config["embeddings"],
+        run_config=RunConfig(
+            timeout=RAGAS_TIMEOUT_SECONDS,
+            max_retries=RAGAS_MAX_RETRIES,
+            max_workers=RAGAS_MAX_WORKERS,
+        ),
+        batch_size=1,
     )
 
     # Convert to dictionary for easier handling
@@ -433,12 +513,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Build dataset from JSON file
-    dataset = build_evaluation_dataset(args.dataset)
-
-    # Optionally limit samples
-    if args.sample:
-        dataset.samples = dataset.samples[:args.sample]
-        print(f"\nLimited to first {args.sample} samples for testing")
+    dataset = build_evaluation_dataset(args.dataset, sample_limit=args.sample)
 
     # Run selected evaluation mode
     if args.mode == "full":
