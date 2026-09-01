@@ -1,145 +1,95 @@
 # Local Personal RAG Assistant
 
-A small terminal-based RAG assistant for asking questions over local files — personal notes, profiles, books, or any text-based PDF. It indexes text and text-based PDFs, retrieves relevant context with hybrid search, optionally retrieves PDF image references, and answers through a Hugging Face Router-compatible chat model.
+A terminal-based Retrieval-Augmented Generation (RAG) assistant for querying local `.txt` files and text-extractable PDFs. It builds a text index in Qdrant, optionally extracts PDF images into a CLIP-powered Chroma index, and answers questions using either Ollama or OpenRouter-compatible chat models.
 
 ## Features
 
-- Ingests `.txt` and text-extractable `.pdf` files from `data/`
-- Stores chunks as pure document content; source file and page live in chunk metadata
-- Uses semantic chunking by default, with recursive chunking available through `CHUNKING_STRATEGY=recursive`
-- Stores text embeddings in Qdrant (text data)
-- Combines vector-store MMR semantic retrieval with BM25 keyword retrieval
-- Rewrites follow-up questions and expands queries with multi-query retrieval
+- Ingests local `.txt` and `.pdf` files from `data/`
+- Supports semantic chunking by default, with recursive chunking as an option
+- Stores text embeddings in Qdrant using `sentence-transformers/all-MiniLM-L6-v2`
+- Combines Qdrant MMR semantic search with BM25 keyword retrieval
+- Rewrites follow-up questions and expands queries for stronger recall
 - Reranks retrieved text with `cross-encoder/ms-marco-MiniLM-L-6-v2`
-- Optionally extracts PDF images and stores CLIP image embeddings in ChromaDB (`image_chroma_db/` for image data)
-- Builds final context from text chunks plus image references
-
-## Architecture
-
-```text
-data/
-  -> ingestion/run.py (text pipeline)
-  -> semantic or recursive chunking
-  -> text embeddings
-  -> Qdrant collection (text data)
-
-PDF images
-  -> ingestion/run.py (image pipeline)
-  -> data/extracted_images/
-  -> CLIP embeddings
-  -> ChromaDB / image_chroma_db/ (image data)
-
-question
-  -> chat.py
-  -> query rewrite + multi-query expansion
-  -> hybrid retrieval: vector-store MMR + BM25
-  -> cross-encoder reranking
-  -> combined text + image-reference context
-  -> grounded answer
-```
-
-Image support retrieves image file references from PDFs. It does not perform full image, audio, or video understanding.
+- Extracts embedded PDF images and retrieves image references with CLIP + Chroma
+- Includes RAGAS evaluation support with `eval_dataset.json`
 
 ## Project Structure
 
 ```text
 .
-├── chat.py
+├── chat.py                  # terminal chat entry point
 ├── ingestion/
-│   ├── __init__.py
-│   ├── run.py              # single entry point
+│   ├── run.py               # text/image ingestion entry point
 │   ├── text_pipeline.py
-│   ├── text_vectorstore.py
 │   ├── image_pipeline.py
-│   └── store.py
-├── hybrid_retrieval.py
-├── image_retrieval.py
-├── image_extractor.py
-├── query_enhancement.py
+│   └── text_vectorstore.py
+├── hybrid_retrieval.py      # semantic + keyword retrieval and reranking
+├── query_enhancement.py     # query rewrite and multi-query retrieval
 ├── context_formatting.py
-├── recursive_chunking.py
-├── embeddings/
+├── image_retrieval.py
+├── ragas_eval.py
 ├── tests/
-├── data/
-└── image_chroma_db/        # generated ChromaDB vector store (for image data)
+└── data/                    # source documents
 ```
 
 ## Setup
 
-Requirements:
+Requires Python 3.10+, Qdrant, and either Ollama or an OpenRouter API key.
 
-- Python 3.10+
-- Hugging Face access token
-
-Create a local `.env` file:
+Create `.env`:
 
 ```text
-HF_TOKEN=your_hugging_face_token_here
-QDRANT_URL=your_qdrant_url_here
-QDRANT_API_KEY=your_qdrant_api_key_here
+QDRANT_URL=your_qdrant_url
+QDRANT_API_KEY=your_qdrant_api_key
 QDRANT_TEXT_COLLECTION=rag_text
 
-# LLM Configuration (ollama or openrouter)
 LLM_PROVIDER=ollama
 OLLAMA_MODEL=qwen3:1.7b
-OLLAMA_BASE_URL=http://localhost:11434/v1
-# OPENROUTER_API_KEY=your_openrouter_api_key_here
+OLLAMA_BASE_URL=http://localhost:11434
+
+# For OpenRouter instead:
+# LLM_PROVIDER=openrouter
+# OPENROUTER_API_KEY=your_openrouter_api_key
 ```
 
-Create a virtual environment and install dependencies:
+Install dependencies:
 
 ```bash
 python -m venv venv
 source venv/bin/activate
-pip install langchain langchain-classic langchain-community langchain-chroma langchain-qdrant langchain-experimental langchain-huggingface langchain-openai langchain-text-splitters python-dotenv chromadb qdrant-client sentence-transformers pypdf pymupdf
+pip install langchain langchain-classic langchain-community langchain-chroma langchain-qdrant langchain-experimental langchain-huggingface langchain-openai langchain-ollama langchain-text-splitters python-dotenv chromadb qdrant-client sentence-transformers pypdf pymupdf pillow ragas langchain-google-vertexai
 ```
-
-There is no `requirements.txt` yet, so dependencies are installed directly for now.
 
 ## Usage
 
-Text retrieval uses Qdrant for text data, while image retrieval uses ChromaDB (`image_chroma_db/`) for image data. Add these Qdrant values to `.env`:
-
-```text
-QDRANT_URL=your_qdrant_url_here
-QDRANT_API_KEY=your_qdrant_api_key_here
-QDRANT_TEXT_COLLECTION=rag_text
-```
-
-Build the indexes (text + images):
+Add documents to `data/`, then rebuild indexes:
 
 ```bash
 python -m ingestion.run
 ```
 
-Build only the text index:
+Useful ingestion options:
 
 ```bash
 python -m ingestion.run --text-only
-```
-
-Optionally build only the PDF image index:
-
-```bash
 python -m ingestion.run --images-only
+python -m ingestion.run --strategy recursive
 ```
 
-Start the terminal chat:
+Start chat:
 
 ```bash
 python chat.py
 ```
 
-Type `exit` to quit.
+Run evaluation:
 
-## Retrieval Notes
+```bash
+python ragas_eval.py --mode full --dataset eval_dataset.json --output evaluation_results.json
+```
 
-- Semantic text retrieval uses Qdrant MMR with `k=12`, `fetch_k=20`, and `lambda_mult=0.5`
-- BM25 keyword retrieval returns `k=12` candidates
-- The ensemble retriever uses equal semantic and keyword weights
-- The top 5 reranked text chunks are sent to the chat model
-- Chunk embeddings are computed over pure content; `[Source: … | page N]` citation headers are rendered from metadata only when the answer context is built, after reranking
-- Query rewriting resolves follow-up references and expands synonyms; it does not inject any fixed subject name, so retrieval ranks on actual content relevance
-- Image retrieval uses ChromaDB (`image_chroma_db/`) to return up to 3 image references when `image_chroma_db/` exists
+## Notes
 
-After changing ingestion behavior or adding files to `data/`, re-run `python -m ingestion.run` to rebuild the indexes.
+- Re-run ingestion after adding or changing files in `data/`.
+- Image retrieval returns references to extracted images; final answers are grounded primarily in retrieved text context.
+- Generated image data is stored in `data/extracted_images/` and `image_chroma_db/`.
