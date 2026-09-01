@@ -145,18 +145,26 @@ def load_evaluation_samples(json_path: Optional[str] = None) -> List[EvaluationS
     return EVALUATION_SAMPLES
 
 
-def build_evaluation_dataset(json_path: Optional[str] = None) -> EvaluationDataset:
+def build_evaluation_dataset(
+    json_path: Optional[str] = None,
+    sample_limit: Optional[int] = None,
+) -> EvaluationDataset:
     """
     Run the RAG pipeline on each evaluation question and build a RAGAS EvaluationDataset.
 
     Args:
         json_path: Optional path to JSON file with evaluation samples
+        sample_limit: Optional number of samples to run before building the dataset
 
     Returns:
         EvaluationDataset: Dataset with SingleTurnSample objects containing
         user_input, response, retrieved_contexts, and reference (ground_truth)
     """
     eval_samples = load_evaluation_samples(json_path)
+    if sample_limit:
+        eval_samples = eval_samples[:sample_limit]
+        log_step(f"Limited to first {sample_limit} samples for testing")
+
     log_step(f"Building evaluation dataset by running RAG pipeline on {len(eval_samples)} questions...")
 
     samples: List[SingleTurnSample] = []
@@ -183,8 +191,6 @@ def build_evaluation_dataset(json_path: Optional[str] = None) -> EvaluationDatas
         # We need to manually run retrieval to capture the contexts
         from query_enhancement import rewrite_query
         from chat import retrieval_llm, FINAL_CONTEXT_DOCS, image_vectorstore, get_image_docs_with_scores
-        from image_retrieval import format_image_references
-        from context_formatting import build_combined_context
 
         try:
             started = time.perf_counter()
@@ -445,12 +451,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Build dataset from JSON file
-    dataset = build_evaluation_dataset(args.dataset)
-
-    # Optionally limit samples
-    if args.sample:
-        dataset.samples = dataset.samples[:args.sample]
-        print(f"\nLimited to first {args.sample} samples for testing")
+    dataset = build_evaluation_dataset(args.dataset, sample_limit=args.sample)
 
     # Run selected evaluation mode
     if args.mode == "full":
