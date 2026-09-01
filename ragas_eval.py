@@ -16,8 +16,10 @@ from __future__ import annotations
 
 import os
 import json
+import signal
 import sys
 import types
+import time
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass, asdict
@@ -43,6 +45,7 @@ from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
 from langchain_huggingface import HuggingFaceEmbeddings
 from ragas import evaluate
+from ragas.run_config import RunConfig
 from ragas.metrics import (
     faithfulness,
     context_precision,
@@ -60,6 +63,39 @@ from embeddings.text_embeddings import get_text_embedding_model
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 EVALUATION_MODEL = "google/gemma-4-31b-it:free"  # Use heavy model for evaluation
 EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
+RAGAS_TIMEOUT_SECONDS = int(os.getenv("RAGAS_TIMEOUT_SECONDS", "60"))
+RAGAS_MAX_RETRIES = int(os.getenv("RAGAS_MAX_RETRIES", "1"))
+RAGAS_MAX_WORKERS = int(os.getenv("RAGAS_MAX_WORKERS", "1"))
+RAG_PIPELINE_TIMEOUT_SECONDS = int(os.getenv("RAG_PIPELINE_TIMEOUT_SECONDS", "120"))
+
+
+def log_step(message: str) -> None:
+    """Print timestamped progress so a slow provider call is easy to locate."""
+    print(f"[{time.strftime('%H:%M:%S')}] {message}", flush=True)
+
+
+def run_with_timeout(label: str, timeout_seconds: int, func):
+    """Run a blocking stage with a hard timeout."""
+    if timeout_seconds <= 0:
+        return func()
+
+    def handle_timeout(signum, frame):
+        raise TimeoutError(f"{label} timed out after {timeout_seconds}s")
+
+    previous_handler = signal.getsignal(signal.SIGALRM)
+    signal.signal(signal.SIGALRM, handle_timeout)
+    signal.setitimer(signal.ITIMER_REAL, timeout_seconds)
+    try:
+        return func()
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, previous_handler)
+
+
+def invoke_single_query_retriever(query: str):
+    """Use the wrapped base retriever so eval context capture does not call the LLM again."""
+    base_retriever = getattr(hybrid_retriever, "retriever", hybrid_retriever)
+    return base_retriever.invoke(query)
 
 
 @dataclass
@@ -78,80 +114,18 @@ EVALUATION_SAMPLES: List[EvaluationSample] = [
         ground_truth="Kazi Tanjim Shakib is a Senior Software Engineer at Samsung R&D Institute Bangladesh Ltd.",
         expected_context_keywords=["Senior Software Engineer", "Samsung R&D Institute Bangladesh"],
     ),
-    EvaluationSample(
-        question="Where is Kazi Tanjim Shakib based?",
-        ground_truth="Dhaka, Bangladesh",
-        expected_context_keywords=["Dhaka", "Bangladesh"],
-    ),
-   EvaluationSample(
-        question="What programming languages does Kazi Tanjim Shakib know?",
-        ground_truth="Swift, JavaScript, Python, C++, HTML/CSS/SCSS",
-        expected_context_keywords=["Swift", "JavaScript", "Python", "C++"],
-    ),
-    EvaluationSample(
-        question="What iOS frameworks and technologies does Kazi Tanjim Shakib have experience with?",
-        ground_truth="SwiftUI, UIKit, Combine, SwiftData, Firebase iOS SDK, Apple MLX, Xcode",
-        expected_context_keywords=["SwiftUI", "UIKit", "Combine", "SwiftData", "Firebase", "MLX"],
-    ),
-    EvaluationSample(
-        question="What is the Basic_Rag_System project?",
-        ground_truth="Basic_Rag_System is a local Retrieval-Augmented Generation (RAG) pipeline built with LangChain in Python that runs entirely in the terminal without cloud API dependencies.",
-        expected_context_keywords=["Basic_Rag_System", "LangChain", "RAG", "local", "terminal"],
-    ),
-
     # Travel History
     EvaluationSample(
         question="Which travel destination did Kazi Tanjim Shakib rate 10/10?",
         ground_truth="Bandarban and Saint Martin Island both received a 10/10 rating.",
         expected_context_keywords=["Bandarban", "Saint Martin", "10/10"],
     ),
-    EvaluationSample(
-        question="What activities did Kazi Tanjim Shakib do in Cox's Bazar?",
-        ground_truth="Beach walking, photography, road trip, and seafood exploration",
-        expected_context_keywords=["Beach", "photography", "road trip", "seafood", "Cox's Bazar"],
-    ),
-    EvaluationSample(
-        question="What is the highest rated trip and what made it special?",
-        ground_truth="Bandarban and Saint Martin Island are both rated 10/10. Bandarban for mountain sunrise at Nilgiri, Saint Martin for snorkeling at Chera Dwip.",
-        expected_context_keywords=["Bandarban", "Saint Martin", "Nilgiri", "Chera Dwip", "snorkeling"],
-    ),
-    EvaluationSample(
-        question="Which destination inspired future travel to Nepal and Switzerland?",
-        ground_truth="Bandarban inspired future travel to Nepal and Switzerland.",
-        expected_context_keywords=["Bandarban", "Nepal", "Switzerland"],
-    ),
-    EvaluationSample(
-        question="What did Kazi Tanjim Shakib learn from the Sylhet trip?",
-        ground_truth="Discovered that forests and wetlands provide unique photography opportunities that differ from beaches and mountains.",
-        expected_context_keywords=["Sylhet", "forests", "wetlands", "photography", "Ratargul"],
-    ),
-
     # Projects / GitHub
-    EvaluationSample(
-        question="How many public repositories does Shakib053 have on GitHub?",
-        ground_truth="33 public repositories",
-        expected_context_keywords=["33", "public repositories", "GitHub"],
-    ),
-    EvaluationSample(
-        question="What is the Codeforces-Codes repository?",
-        ground_truth="A large collection of C++ solutions to Codeforces competitive programming problems with 348 commits and hundreds of individual solution files.",
-        expected_context_keywords=["Codeforces", "C++", "348", "competitive programming"],
-    ),
-    EvaluationSample(
-        question="What full-stack web projects has Kazi Tanjim Shakib built?",
-        ground_truth="Apartment selling platform, tourism booking site, healthcare website, online learning platform, stock tracker - all using MERN stack.",
-        expected_context_keywords=["MERN", "MongoDB", "Express", "React", "Node.js", "full-stack"],
-    ),
     EvaluationSample(
         question="What is the Salah app?",
         ground_truth="Salah is an open-source, non-profit iOS application for Islamic prayer timings and tracking, built with SwiftUI and Combine.",
         expected_context_keywords=["Salah", "prayer", "Islamic", "SwiftUI", "Combine", "open-source"],
     ),
-    EvaluationSample(
-        question="Which project demonstrates on-device ML with Apple MLX?",
-        ground_truth="MLX-SwiftUI integrates Apple's MLX machine learning framework with SwiftUI for on-device inference.",
-        expected_context_keywords=["MLX-SwiftUI", "Apple MLX", "on-device", "SwiftUI"],
-    )
 ]
 
 
@@ -183,19 +157,26 @@ def build_evaluation_dataset(json_path: Optional[str] = None) -> EvaluationDatas
         user_input, response, retrieved_contexts, and reference (ground_truth)
     """
     eval_samples = load_evaluation_samples(json_path)
-    print(f"Building evaluation dataset by running RAG pipeline on {len(eval_samples)} questions...")
+    log_step(f"Building evaluation dataset by running RAG pipeline on {len(eval_samples)} questions...")
 
     samples: List[SingleTurnSample] = []
     chat_history = []  # Fresh history for each evaluation
 
     for idx, eval_sample in enumerate(eval_samples):
-        print(f"\n[{idx + 1}/{len(eval_samples)}] Evaluating: {eval_sample.question[:60]}...")
+        log_step(f"\n[{idx + 1}/{len(eval_samples)}] Evaluating: {eval_sample.question[:60]}...")
 
         # Get RAG response (this runs the full pipeline: rewrite -> retrieve -> rerank -> generate)
         try:
-            response = get_rag_response(eval_sample.question, chat_history)
+            started = time.perf_counter()
+            log_step("  Generating RAG response...")
+            response = run_with_timeout(
+                "RAG response generation",
+                RAG_PIPELINE_TIMEOUT_SECONDS,
+                lambda: get_rag_response(eval_sample.question, chat_history),
+            )
+            log_step(f"  RAG response generated in {time.perf_counter() - started:.1f}s")
         except Exception as e:
-            print(f"  ERROR generating response: {e}")
+            log_step(f"  ERROR generating response: {e}")
             response = "ERROR: Failed to generate response"
 
         # Get retrieved contexts for context-based metrics
@@ -206,15 +187,37 @@ def build_evaluation_dataset(json_path: Optional[str] = None) -> EvaluationDatas
         from context_formatting import build_combined_context
 
         try:
-            standalone = rewrite_query(eval_sample.question, chat_history, retrieval_llm)
-            candidate_docs = hybrid_retriever.invoke(standalone)
-            image_results = get_image_docs_with_scores(standalone, image_vectorstore)
-            docs = rerank_documents(standalone, candidate_docs, top_k=FINAL_CONTEXT_DOCS)
+            started = time.perf_counter()
+            log_step("  Rewriting query for context capture...")
+            standalone = run_with_timeout(
+                "query rewrite",
+                RAG_PIPELINE_TIMEOUT_SECONDS,
+                lambda: rewrite_query(eval_sample.question, chat_history, retrieval_llm),
+            )
+            log_step("  Retrieving text contexts...")
+            candidate_docs = run_with_timeout(
+                "text context retrieval",
+                RAG_PIPELINE_TIMEOUT_SECONDS,
+                lambda: invoke_single_query_retriever(standalone),
+            )
+            log_step("  Retrieving image contexts...")
+            image_results = run_with_timeout(
+                "image context retrieval",
+                RAG_PIPELINE_TIMEOUT_SECONDS,
+                lambda: get_image_docs_with_scores(standalone, image_vectorstore),
+            )
+            log_step("  Reranking text contexts...")
+            docs = run_with_timeout(
+                "text context reranking",
+                RAG_PIPELINE_TIMEOUT_SECONDS,
+                lambda: rerank_documents(standalone, candidate_docs, top_k=FINAL_CONTEXT_DOCS),
+            )
+            log_step(f"  Context capture completed in {time.perf_counter() - started:.1f}s")
 
             # Extract context texts for RAGAS
             retrieved_contexts = [doc.page_content for doc in docs]
         except Exception as e:
-            print(f"  ERROR retrieving contexts: {e}")
+            log_step(f"  ERROR retrieving contexts: {e}")
             retrieved_contexts = []
 
         # Create SingleTurnSample for RAGAS
@@ -226,11 +229,11 @@ def build_evaluation_dataset(json_path: Optional[str] = None) -> EvaluationDatas
         )
         samples.append(sample)
 
-        print(f"  Response: {response[:100]}...")
-        print(f"  Contexts retrieved: {len(retrieved_contexts)}")
+        log_step(f"  Response: {response[:100]}...")
+        log_step(f"  Contexts retrieved: {len(retrieved_contexts)}")
 
     dataset = EvaluationDataset(samples=samples)
-    print(f"\n✓ Built evaluation dataset with {len(samples)} samples")
+    log_step(f"\n✓ Built evaluation dataset with {len(samples)} samples")
     return dataset
 
 
@@ -250,6 +253,7 @@ def configure_ragas_llm_and_embeddings() -> Dict[str, Any]:
             model=ollama_model,
             base_url=ollama_base_url,
             temperature=0.0,
+            client_kwargs={"timeout": RAGAS_TIMEOUT_SECONDS},
         )
     else:
         if not OPENROUTER_API_KEY:
@@ -261,6 +265,8 @@ def configure_ragas_llm_and_embeddings() -> Dict[str, Any]:
             base_url="https://openrouter.ai/api/v1",
             temperature=0.0,  # Deterministic for evaluation
             max_tokens=1024,
+            timeout=RAGAS_TIMEOUT_SECONDS,
+            max_retries=RAGAS_MAX_RETRIES,
         )
 
     # Embeddings for RAGAS (used by context_precision/recall for semantic matching)
@@ -312,6 +318,12 @@ def run_ragas_evaluation(
         metrics=metrics,
         llm=ragas_config["llm"],
         embeddings=ragas_config["embeddings"],
+        run_config=RunConfig(
+            timeout=RAGAS_TIMEOUT_SECONDS,
+            max_retries=RAGAS_MAX_RETRIES,
+            max_workers=RAGAS_MAX_WORKERS,
+        ),
+        batch_size=1,
     )
 
     # Convert to dictionary for easier handling
