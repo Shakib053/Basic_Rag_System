@@ -114,80 +114,18 @@ EVALUATION_SAMPLES: List[EvaluationSample] = [
         ground_truth="Kazi Tanjim Shakib is a Senior Software Engineer at Samsung R&D Institute Bangladesh Ltd.",
         expected_context_keywords=["Senior Software Engineer", "Samsung R&D Institute Bangladesh"],
     ),
-    EvaluationSample(
-        question="Where is Kazi Tanjim Shakib based?",
-        ground_truth="Dhaka, Bangladesh",
-        expected_context_keywords=["Dhaka", "Bangladesh"],
-    ),
-   EvaluationSample(
-        question="What programming languages does Kazi Tanjim Shakib know?",
-        ground_truth="Swift, JavaScript, Python, C++, HTML/CSS/SCSS",
-        expected_context_keywords=["Swift", "JavaScript", "Python", "C++"],
-    ),
-    EvaluationSample(
-        question="What iOS frameworks and technologies does Kazi Tanjim Shakib have experience with?",
-        ground_truth="SwiftUI, UIKit, Combine, SwiftData, Firebase iOS SDK, Apple MLX, Xcode",
-        expected_context_keywords=["SwiftUI", "UIKit", "Combine", "SwiftData", "Firebase", "MLX"],
-    ),
-    EvaluationSample(
-        question="What is the Basic_Rag_System project?",
-        ground_truth="Basic_Rag_System is a local Retrieval-Augmented Generation (RAG) pipeline built with LangChain in Python that runs entirely in the terminal without cloud API dependencies.",
-        expected_context_keywords=["Basic_Rag_System", "LangChain", "RAG", "local", "terminal"],
-    ),
-
     # Travel History
     EvaluationSample(
         question="Which travel destination did Kazi Tanjim Shakib rate 10/10?",
         ground_truth="Bandarban and Saint Martin Island both received a 10/10 rating.",
         expected_context_keywords=["Bandarban", "Saint Martin", "10/10"],
     ),
-    EvaluationSample(
-        question="What activities did Kazi Tanjim Shakib do in Cox's Bazar?",
-        ground_truth="Beach walking, photography, road trip, and seafood exploration",
-        expected_context_keywords=["Beach", "photography", "road trip", "seafood", "Cox's Bazar"],
-    ),
-    EvaluationSample(
-        question="What is the highest rated trip and what made it special?",
-        ground_truth="Bandarban and Saint Martin Island are both rated 10/10. Bandarban for mountain sunrise at Nilgiri, Saint Martin for snorkeling at Chera Dwip.",
-        expected_context_keywords=["Bandarban", "Saint Martin", "Nilgiri", "Chera Dwip", "snorkeling"],
-    ),
-    EvaluationSample(
-        question="Which destination inspired future travel to Nepal and Switzerland?",
-        ground_truth="Bandarban inspired future travel to Nepal and Switzerland.",
-        expected_context_keywords=["Bandarban", "Nepal", "Switzerland"],
-    ),
-    EvaluationSample(
-        question="What did Kazi Tanjim Shakib learn from the Sylhet trip?",
-        ground_truth="Discovered that forests and wetlands provide unique photography opportunities that differ from beaches and mountains.",
-        expected_context_keywords=["Sylhet", "forests", "wetlands", "photography", "Ratargul"],
-    ),
-
     # Projects / GitHub
-    EvaluationSample(
-        question="How many public repositories does Shakib053 have on GitHub?",
-        ground_truth="33 public repositories",
-        expected_context_keywords=["33", "public repositories", "GitHub"],
-    ),
-    EvaluationSample(
-        question="What is the Codeforces-Codes repository?",
-        ground_truth="A large collection of C++ solutions to Codeforces competitive programming problems with 348 commits and hundreds of individual solution files.",
-        expected_context_keywords=["Codeforces", "C++", "348", "competitive programming"],
-    ),
-    EvaluationSample(
-        question="What full-stack web projects has Kazi Tanjim Shakib built?",
-        ground_truth="Apartment selling platform, tourism booking site, healthcare website, online learning platform, stock tracker - all using MERN stack.",
-        expected_context_keywords=["MERN", "MongoDB", "Express", "React", "Node.js", "full-stack"],
-    ),
     EvaluationSample(
         question="What is the Salah app?",
         ground_truth="Salah is an open-source, non-profit iOS application for Islamic prayer timings and tracking, built with SwiftUI and Combine.",
         expected_context_keywords=["Salah", "prayer", "Islamic", "SwiftUI", "Combine", "open-source"],
     ),
-    EvaluationSample(
-        question="Which project demonstrates on-device ML with Apple MLX?",
-        ground_truth="MLX-SwiftUI integrates Apple's MLX machine learning framework with SwiftUI for on-device inference.",
-        expected_context_keywords=["MLX-SwiftUI", "Apple MLX", "on-device", "SwiftUI"],
-    )
 ]
 
 

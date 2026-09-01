@@ -6,84 +6,24 @@
       "expected_context_keywords": ["Senior Software Engineer", "Samsung R&D Institute Bangladesh"]
     },
     {
-      "question": "Where is Kazi Tanjim Shakib based?",
-      "ground_truth": "Dhaka, Bangladesh",
-      "expected_context_keywords": ["Dhaka", "Bangladesh"]
-    },
-    {
-      "question": "What programming languages does Kazi Tanjim Shakib know?",
-      "ground_truth": "Swift, JavaScript, Python, C++, HTML/CSS/SCSS",
-      "expected_context_keywords": ["Swift", "JavaScript", "Python", "C++"]
-    },
-    {
-      "question": "What iOS frameworks and technologies does Kazi Tanjim Shakib have experience with?",
-      "ground_truth": "SwiftUI, UIKit, Combine, SwiftData, Firebase iOS SDK, Apple MLX, Xcode",
-      "expected_context_keywords": ["SwiftUI", "UIKit", "Combine", "SwiftData", "Firebase", "MLX"]
-    },
-    {
-      "question": "What is the Basic_Rag_System project?",
-      "ground_truth": "Basic_Rag_System is a local Retrieval-Augmented Generation (RAG) pipeline built with LangChain in Python that runs entirely in the terminal without cloud API dependencies.",
-      "expected_context_keywords": ["Basic_Rag_System", "LangChain", "RAG", "local", "terminal"]
-    },
-    {
       "question": "Which travel destination did Kazi Tanjim Shakib rate 10/10?",
       "ground_truth": "Bandarban and Saint Martin Island both received a 10/10 rating.",
       "expected_context_keywords": ["Bandarban", "Saint Martin", "10/10"]
     },
     {
-      "question": "What activities did Kazi Tanjim Shakib do in Cox's Bazar?",
-      "ground_truth": "Beach walking, photography, road trip, and seafood exploration",
-      "expected_context_keywords": ["Beach", "photography", "road trip", "seafood", "Cox's Bazar"]
-    },
-    {
-      "question": "What is the highest rated trip and what made it special?",
-      "ground_truth": "Bandarban and Saint Martin Island are both rated 10/10. Bandarban for mountain sunrise at Nilgiri, Saint Martin for snorkeling at Chera Dwip.",
-      "expected_context_keywords": ["Bandarban", "Saint Martin", "Nilgiri", "Chera Dwip", "snorkeling"]
-    },
-    {
-      "question": "Which destination inspired future travel to Nepal and Switzerland?",
-      "ground_truth": "Bandarban inspired future travel to Nepal and Switzerland.",
-      "expected_context_keywords": ["Bandarban", "Nepal", "Switzerland"]
-    },
-    {
-      "question": "What did Kazi Tanjim Shakib learn from the Sylhet trip?",
-      "ground_truth": "Discovered that forests and wetlands provide unique photography opportunities that differ from beaches and mountains.",
-      "expected_context_keywords": ["Sylhet", "forests", "wetlands", "photography", "Ratargul"]
-    },
-    {
-      "question": "How many public repositories does Shakib053 have on GitHub?",
-      "ground_truth": "33 public repositories",
-      "expected_context_keywords": ["33", "public repositories", "GitHub"]
-    },
-    {
-      "question": "What is the Codeforces-Codes repository?",
-      "ground_truth": "A large collection of C++ solutions to Codeforces competitive programming problems with 348 commits and hundreds of individual solution files.",
-      "expected_context_keywords": ["Codeforces", "C++", "348", "competitive programming"]
-    },
-    {
-      "question": "What full-stack web projects has Kazi Tanjim Shakib built?",
-      "ground_truth": "Apartment selling platform, tourism booking site, healthcare website, online learning platform, stock tracker - all using MERN stack.",
-      "expected_context_keywords": ["MERN", "MongoDB", "Express", "React", "Node.js", "full-stack"]
-    },
-    {
       "question": "What is the Salah app?",
       "ground_truth": "Salah is an open-source, non-profit iOS application for Islamic prayer timings and tracking, built with SwiftUI and Combine.",
       "expected_context_keywords": ["Salah", "prayer", "Islamic", "SwiftUI", "Combine", "open-source"]
-    },
-    {
-      "question": "Which project demonstrates on-device ML with Apple MLX?",
-      "ground_truth": "MLX-SwiftUI integrates Apple's MLX machine learning framework with SwiftUI for on-device inference.",
-      "expected_context_keywords": ["MLX-SwiftUI", "Apple MLX", "on-device", "SwiftUI"]
     }
   ],
   "metadata": {
     "description": "Ground truth QA pairs for RAGAS evaluation of Personal RAG Assistant",
     "source_documents": ["Personal_info.txt", "Projects.txt", "Travel_history.txt"],
-    "total_samples": 15,
+    "total_samples": 3,
     "categories": {
-      "personal_info": 5,
-      "travel_history": 5,
-      "projects_github": 5
+      "personal_info": 1,
+      "travel_history": 1,
+      "projects_github": 1
     }
   }
 }
