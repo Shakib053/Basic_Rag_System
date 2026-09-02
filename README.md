@@ -1,16 +1,17 @@
-# Local Personal RAG Assistant
+# Local Document RAG Assistant
 
-A terminal-based Retrieval-Augmented Generation (RAG) assistant for querying local `.txt` files and text-extractable PDFs. It builds a text index in Qdrant, optionally extracts PDF images into a CLIP-powered Chroma index, and answers questions using either Ollama or OpenRouter-compatible chat models.
+A terminal-based Retrieval-Augmented Generation (RAG) assistant for querying local `.txt`, `.docx`, and text-extractable PDF files. It builds a text index in Qdrant, optionally extracts PDF images into a CLIP-powered Chroma index, and answers questions using either Ollama or OpenRouter-compatible chat models.
 
 ## Features
 
-- Ingests local `.txt` and `.pdf` files from `data/`
+- Ingests local `.txt`, `.docx`, and `.pdf` files from `data/`
 - Supports semantic chunking by default, with recursive chunking as an option
 - Stores text embeddings in Qdrant using `sentence-transformers/all-MiniLM-L6-v2`
 - Combines Qdrant MMR semantic search with BM25 keyword retrieval
-- Rewrites follow-up questions and expands queries for stronger recall
+- Rewrites follow-up questions conservatively and expands queries for stronger recall
 - Reranks retrieved text with `cross-encoder/ms-marco-MiniLM-L-6-v2`
 - Extracts embedded PDF images and retrieves image references with CLIP + Chroma
+- Avoids guessing ambiguous pronouns such as "he" or "she"; when needed, answers by source document
 - Includes RAGAS evaluation support with `eval_dataset.json`
 
 ## Project Structure
@@ -57,7 +58,7 @@ Install dependencies:
 ```bash
 python -m venv venv
 source venv/bin/activate
-pip install langchain langchain-classic langchain-community langchain-chroma langchain-qdrant langchain-experimental langchain-huggingface langchain-openai langchain-ollama langchain-text-splitters python-dotenv chromadb qdrant-client sentence-transformers pypdf pymupdf pillow ragas langchain-google-vertexai
+pip install langchain langchain-classic langchain-community langchain-chroma langchain-qdrant langchain-experimental langchain-huggingface langchain-openai langchain-ollama langchain-text-splitters python-dotenv chromadb qdrant-client sentence-transformers pypdf pymupdf pillow ragas langchain-google-vertexai docx2txt
 ```
 
 ## Usage
@@ -91,5 +92,6 @@ python ragas_eval.py --mode full --dataset eval_dataset.json --output evaluation
 ## Notes
 
 - Re-run ingestion after adding or changing files in `data/`.
+- Ambiguous pronouns are not mapped to a person unless chat history or retrieved context clearly identifies that subject.
 - Image retrieval returns references to extracted images; final answers are grounded primarily in retrieved text context.
 - Generated image data is stored in `data/extracted_images/` and `image_chroma_db/`.
