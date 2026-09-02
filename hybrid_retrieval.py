@@ -5,14 +5,14 @@ from pathlib import Path
 from typing import Any, Sequence
 import warnings
 
-from langchain_community.document_loaders import PyMuPDFLoader
+from langchain_community.document_loaders import Docx2txtLoader, PyMuPDFLoader
 from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
 from langchain_classic.retrievers import EnsembleRetriever
 from sentence_transformers import CrossEncoder
 
 RERANKER_MODEL_NAME = "cross-encoder/ms-marco-MiniLM-L-6-v2"
-SUPPORTED_FILE_TYPES = {".txt", ".pdf"}
+SUPPORTED_FILE_TYPES = {".txt", ".pdf", ".docx"}
 ORIGINAL_PAGE_CONTENT_KEY = "_original_page_content"
 
 def _clean_pdf_headers(pages: list[Document]) -> list[Document]:
@@ -68,6 +68,38 @@ def load_documents(data_dir: str | Path) -> list[Document]:
                             "file_type": file_type,
                         },
                     )
+                )
+            continue
+
+        if file_type == "docx":
+            try:
+                word_documents = Docx2txtLoader(str(file_path)).load()
+            except Exception as exc:
+                warnings.warn(
+                    f"Skipping unreadable Word document '{file_path}': {exc}",
+                    stacklevel=2,
+                )
+                continue
+
+            readable_documents = 0
+            for document in word_documents:
+                if not document.page_content.strip():
+                    continue
+
+                document.metadata.update(
+                    {
+                        "source": str(file_path),
+                        "file_name": file_path.name,
+                        "file_type": file_type,
+                    }
+                )
+                documents.append(document)
+                readable_documents += 1
+
+            if readable_documents == 0:
+                warnings.warn(
+                    f"Skipping Word document with no extractable text: '{file_path}'",
+                    stacklevel=2,
                 )
             continue
 
