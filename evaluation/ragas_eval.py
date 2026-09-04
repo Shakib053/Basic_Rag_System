@@ -55,7 +55,7 @@ from ragas.metrics import (
 )
 from ragas.dataset_schema import SingleTurnSample, EvaluationDataset
 
-from chat import get_rag_response, hybrid_retriever
+from chat import get_hybrid_retriever, get_rag_response
 from retrieval.hybrid_retrieval import rerank_documents
 from embeddings.text_embeddings import get_text_embedding_model
 
@@ -94,6 +94,7 @@ def run_with_timeout(label: str, timeout_seconds: int, func):
 
 def invoke_single_query_retriever(query: str):
     """Use the wrapped base retriever so eval context capture does not call the LLM again."""
+    hybrid_retriever = get_hybrid_retriever()
     base_retriever = getattr(hybrid_retriever, "retriever", hybrid_retriever)
     return base_retriever.invoke(query)
 

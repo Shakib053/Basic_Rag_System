@@ -9,6 +9,7 @@ A terminal-based Retrieval-Augmented Generation (RAG) assistant for querying loc
 - Stores text embeddings in Qdrant using `sentence-transformers/all-MiniLM-L6-v2`
 - Combines Qdrant MMR semantic search with BM25 keyword retrieval
 - Rewrites follow-up questions conservatively and expands queries for stronger recall
+- Routes clear general-purpose tasks directly to the LLM and document questions through retrieval
 - Reranks retrieved text with `cross-encoder/ms-marco-MiniLM-L-6-v2`
 - Extracts embedded PDF images and retrieves image references with CLIP + Chroma
 - Instructs the answer model not to guess ambiguous pronouns such as "he" or "she"
