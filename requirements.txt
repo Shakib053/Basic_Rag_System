@@ -1,0 +1,28 @@
+# Production dependencies for Python 3.12.
+# Pins were resolved with uv against the project imports and RAGAS runtime.
+
+chromadb==1.5.9
+datasets==5.0.1
+docx2txt==0.9
+langchain==1.4.0
+langchain-chroma==1.1.0
+langchain-classic==1.0.8
+langchain-community==0.4.2
+langchain-core==1.6.1
+langchain-experimental==0.4.2
+langchain-google-vertexai==3.2.4
+langchain-huggingface==1.2.2
+langchain-ollama==1.1.0
+langchain-openai==1.3.2
+langchain-qdrant==1.1.0
+langchain-text-splitters==1.1.2
+ollama==0.6.2
+openai==2.41.1
+pandas==3.0.5
+Pillow==12.3.0
+PyMuPDF==1.28.2
+python-dotenv==1.2.3
+qdrant-client==1.19.0
+rank-bm25==0.2.2
+ragas==0.4.3
+sentence-transformers==6.0.1

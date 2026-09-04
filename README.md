@@ -35,7 +35,7 @@ A terminal-based Retrieval-Augmented Generation (RAG) assistant for querying loc
 
 ## Setup
 
-Requires Python 3.10+, Qdrant, and either Ollama or an OpenRouter API key.
+Requires Python 3.12, Qdrant, and either Ollama or an OpenRouter API key.
 
 Create `.env`:
 
@@ -56,9 +56,9 @@ OLLAMA_BASE_URL=http://localhost:11434
 Install dependencies:
 
 ```bash
-python -m venv venv
+python3.12 -m venv venv
 source venv/bin/activate
-pip install langchain langchain-classic langchain-community langchain-chroma langchain-qdrant langchain-experimental langchain-huggingface langchain-openai langchain-ollama langchain-text-splitters python-dotenv chromadb qdrant-client sentence-transformers pypdf pymupdf pillow ragas langchain-google-vertexai docx2txt
+python -m pip install -r requirements.txt
 ```
 
 ## Usage
