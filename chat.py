@@ -6,7 +6,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
-from prompts.answer import ANSWER_SYSTEM_PROMPT
+from prompts.answer import ANSWER_SYSTEM_PROMPT, DIRECT_ANSWER_SYSTEM_PROMPT
 from retrieval.context_formatting import build_combined_context
 from embeddings.text_embeddings import get_text_embedding_model
 from retrieval.hybrid_retrieval import (
@@ -21,6 +21,7 @@ from retrieval.image_retrieval import (
 )
 
 from retrieval.query_enhancement import build_multi_query_retriever, rewrite_query
+from retrieval.query_router import QueryMode, route_query
 from vectorstore.qdrant_store import load_text_vectorstore
 
 load_dotenv()
@@ -49,10 +50,9 @@ AMBIGUOUS_PRONOUN_PATTERN = re.compile(
 if HF_TOKEN:
     os.environ["HUGGINGFACE_HUB_TOKEN"] = HF_TOKEN
 
-embedding_model = get_text_embedding_model()
-vectorstore = load_text_vectorstore(embedding_model)
-
-image_vectorstore = load_image_vectorstore()
+embedding_model = None
+vectorstore = None
+image_vectorstore = None
 
 if LLM_PROVIDER == "ollama":
     retrieval_llm = ChatOllama(
@@ -95,6 +95,12 @@ else:
 
 prompt = ChatPromptTemplate.from_messages([
     ("system", ANSWER_SYSTEM_PROMPT),
+    MessagesPlaceholder(variable_name="chat_history"),
+    ("human", "{question}"),
+])
+
+direct_prompt = ChatPromptTemplate.from_messages([
+    ("system", DIRECT_ANSWER_SYSTEM_PROMPT),
     MessagesPlaceholder(variable_name="chat_history"),
     ("human", "{question}"),
 ])
@@ -145,16 +151,33 @@ def print_retrieved_images(image_results):
 
     print()
 
-hybrid_retriever = build_hybrid_retriever(vectorstore)
-if ENABLE_MULTI_QUERY:
-    hybrid_retriever = build_multi_query_retriever(
-        hybrid_retriever,
-        retrieval_llm,
-        num_queries=MULTI_QUERY_COUNT,
-    )
+hybrid_retriever = None
+
+
+def _ensure_retrieval_components():
+    global embedding_model, vectorstore, image_vectorstore, hybrid_retriever
+
+    if hybrid_retriever is not None:
+        return
+
+    embedding_model = get_text_embedding_model()
+    vectorstore = load_text_vectorstore(embedding_model)
+    image_vectorstore = load_image_vectorstore()
+    hybrid_retriever = build_hybrid_retriever(vectorstore)
+    if ENABLE_MULTI_QUERY:
+        hybrid_retriever = build_multi_query_retriever(
+            hybrid_retriever,
+            retrieval_llm,
+            num_queries=MULTI_QUERY_COUNT,
+        )
+
+
+def get_hybrid_retriever():
+    _ensure_retrieval_components()
+    return hybrid_retriever
 
 def get_hybrid_docs(query):
-    return hybrid_retriever.invoke(query)
+    return get_hybrid_retriever().invoke(query)
 
 def run_with_timeout(label, timeout_seconds, func):
     if timeout_seconds <= 0:
@@ -203,6 +226,19 @@ def build_answer_question(question, chat_history):
     )
 
 def get_rag_response(question, chat_history):
+    route = route_query(question)
+    print(f"Query route: {route.mode.value} ({route.reason})")
+
+    if route.mode == QueryMode.DIRECT:
+        print("Generating direct answer...")
+        response = (direct_prompt | answer_llm).invoke({
+            "question": question,
+            "chat_history": chat_history,
+        })
+        return response.content
+
+    _ensure_retrieval_components()
+
     print("Rewriting query...")
     standalone = get_retrieval_query(question, chat_history)
 
