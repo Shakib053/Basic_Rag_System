@@ -11,7 +11,7 @@ A terminal-based Retrieval-Augmented Generation (RAG) assistant for querying loc
 - Rewrites follow-up questions conservatively and expands queries for stronger recall
 - Reranks retrieved text with `cross-encoder/ms-marco-MiniLM-L-6-v2`
 - Extracts embedded PDF images and retrieves image references with CLIP + Chroma
-- Avoids guessing ambiguous pronouns such as "he" or "she"; when needed, answers by source document
+- Instructs the answer model not to guess ambiguous pronouns such as "he" or "she"
 - Includes RAGAS evaluation support with `eval_dataset.json`
 
 ## Project Structure

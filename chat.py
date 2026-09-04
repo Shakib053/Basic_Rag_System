@@ -10,7 +10,6 @@ from prompts.answer import ANSWER_SYSTEM_PROMPT
 from retrieval.context_formatting import build_combined_context
 from embeddings.text_embeddings import get_text_embedding_model
 from retrieval.hybrid_retrieval import (
-    _load_documents_from_vectorstore,
     build_hybrid_retriever,
     select_final_context_documents,
 )
@@ -44,15 +43,6 @@ RETRIEVAL_MODEL = "nvidia/nemotron-3-super-120b-a12b:free"
 ANSWER_MODEL = "nvidia/nemotron-3-ultra-550b-a55b:free"  # heavy: final answer generation
 AMBIGUOUS_PRONOUN_PATTERN = re.compile(
     r"\b(he|she|they|it|him|her|them|his|hers|their|theirs)\b",
-    re.IGNORECASE,
-)
-FORBIDDEN_AMBIGUOUS_ANSWER_PATTERN = re.compile(
-    r"\b(he|she|him|her|his|hers|the person)\b",
-    re.IGNORECASE,
-)
-DESTINATION_PATTERN = re.compile(r"^#+\s*Destination:\s*(.+)$", re.IGNORECASE)
-TRAVEL_QUERY_PATTERN = re.compile(
-    r"\b(travel|traveled|travelled|trip|trips|visited|visit|destination|destinations|went)\b",
     re.IGNORECASE,
 )
 
@@ -208,88 +198,8 @@ def build_answer_question(question, chat_history):
         f"Topical query without the ambiguous pronoun: {topical_query}\n"
         "Do not use he, she, his, her, the person, or similar wording in the "
         "answer. Do not name a subject unless the same retrieved source chunk "
-        "explicitly names that subject. Start each part with the source file "
-        "name, for example: 'In Travel_history.txt, ...'."
-    )
-
-def _document_source_name(doc):
-    return doc.metadata.get("file_name") or doc.metadata.get("source") or "unknown source"
-
-def _document_source_key(doc):
-    return doc.metadata.get("source") or doc.metadata.get("file_name") or "unknown source"
-
-def expand_docs_from_selected_sources(selected_docs):
-    selected_sources = {_document_source_key(doc) for doc in selected_docs}
-    if not selected_sources:
-        return selected_docs
-
-    try:
-        all_docs = _load_documents_from_vectorstore(vectorstore)
-    except Exception as exc:
-        print(f"Source expansion skipped: {exc}")
-        return selected_docs
-
-    expanded_docs = [
-        doc for doc in all_docs
-        if _document_source_key(doc) in selected_sources
-    ]
-    return expanded_docs or selected_docs
-
-def _extract_destinations(doc):
-    destinations = []
-    normalized_content = re.sub(r"\s+(?=#+\s*Destination:)", "\n", doc.page_content)
-    for line in normalized_content.splitlines():
-        match = DESTINATION_PATTERN.search(line.strip())
-        if match:
-            destinations.append(match.group(1).strip())
-    return destinations
-
-def build_source_fallback_answer(docs):
-    if not docs:
-        return "I could not find relevant context in the indexed documents."
-
-    destinations_by_source = {}
-    snippets_by_source = {}
-
-    for doc in docs:
-        source = _document_source_name(doc)
-        destinations_by_source.setdefault(source, [])
-        snippets_by_source.setdefault(source, [])
-
-        destinations_by_source[source].extend(_extract_destinations(doc))
-        snippet = " ".join(doc.page_content.split())
-        if snippet:
-            snippets_by_source[source].append(snippet[:300])
-
-    lines = []
-    for source, destinations in destinations_by_source.items():
-        unique_destinations = list(dict.fromkeys(destinations))
-        if unique_destinations:
-            lines.append(
-                f"In {source}, the retrieved chunks mention these destinations: "
-                f"{', '.join(unique_destinations)}."
-            )
-
-    if lines:
-        return "\n".join(lines)
-
-    for source, snippets in snippets_by_source.items():
-        if snippets:
-            lines.append(f"In {source}, relevant retrieved text says: {snippets[0]}")
-
-    return "\n".join(lines) if lines else "I could not find relevant context in the indexed documents."
-
-def should_use_source_fallback(answer, question, chat_history):
-    if not is_ambiguous_pronoun_question(question, chat_history):
-        return False
-
-    text = str(answer or "").strip()
-    return not text or bool(FORBIDDEN_AMBIGUOUS_ANSWER_PATTERN.search(text))
-
-def should_answer_from_sources(question, chat_history) -> bool:
-    return (
-        is_ambiguous_pronoun_question(question, chat_history)
-        and bool(TRAVEL_QUERY_PATTERN.search(question))
+        "explicitly names that subject. Label claims by source document when "
+        "needed to avoid ambiguity."
     )
 
 def get_rag_response(question, chat_history):
@@ -312,9 +222,6 @@ def get_rag_response(question, chat_history):
     print_retrieved_images(image_results)
     context = build_combined_context(docs, image_results)
 
-    if should_answer_from_sources(question, chat_history):
-        return build_source_fallback_answer(expand_docs_from_selected_sources(docs))
-
     print("Generating answer...")
     rag_chain = prompt | answer_llm
     response = rag_chain.invoke({
@@ -323,9 +230,6 @@ def get_rag_response(question, chat_history):
         "chat_history": chat_history
     })
     answer = response.content
-    if should_use_source_fallback(answer, question, chat_history):
-        return build_source_fallback_answer(docs)
-
     return answer
 
 if __name__ == "__main__":
