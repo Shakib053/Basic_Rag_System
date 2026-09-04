@@ -15,7 +15,7 @@ from typing import Sequence
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
 
-from image_extractor import extract_images_from_pdf
+from ingestion.image_extractor import extract_images_from_pdf
 from embeddings.clip_embeddings import CLIPEmbeddings
 
 

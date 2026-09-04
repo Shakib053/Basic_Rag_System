@@ -1,5 +1,5 @@
 """
-ingestion/store.py
+vectorstore/chroma_store.py
 
 Shared vector-store helpers used by both text_pipeline and image_pipeline.
 These utilities handle building, staging, and atomically swapping Chroma

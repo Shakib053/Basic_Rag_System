@@ -18,18 +18,35 @@ A terminal-based Retrieval-Augmented Generation (RAG) assistant for querying loc
 
 ```text
 .
-├── chat.py                  # terminal chat entry point
+├── chat.py                  # terminal chat entry point (kept at root)
+├── chunking/
+│   └── recursive_chunking.py
+├── embeddings/
+│   ├── clip_embeddings.py
+│   └── text_embeddings.py
+├── evaluation/
+│   └── ragas_eval.py
 ├── ingestion/
+│   ├── image_extractor.py
+│   ├── image_pipeline.py
 │   ├── run.py               # text/image ingestion entry point
 │   ├── text_pipeline.py
-│   ├── image_pipeline.py
-│   └── text_vectorstore.py
-├── hybrid_retrieval.py      # semantic + keyword retrieval and reranking
-├── query_enhancement.py     # query rewrite and multi-query retrieval
-├── context_formatting.py
-├── image_retrieval.py
-├── ragas_eval.py
-├── tests/
+│   └── __init__.py
+├── prompts/
+│   ├── answer.py
+│   └── query.py
+├── retrieval/
+│   ├── context_formatting.py
+│   ├── hybrid_retrieval.py
+│   ├── image_retrieval.py
+│   └── query_enhancement.py
+├── scripts/                 # manual external-service smoke checks
+│   ├── ollama_smoke.py
+│   ├── openrouter_smoke.py
+│   └── qdrant_smoke.py
+├── vectorstore/
+│   ├── chroma_store.py
+│   └── qdrant_store.py
 └── data/                    # source documents
 ```
 
@@ -86,7 +103,15 @@ python chat.py
 Run evaluation:
 
 ```bash
-python ragas_eval.py --mode full --dataset eval_dataset.json --output evaluation_results.json
+python -m evaluation.ragas_eval --mode full --dataset eval_dataset.json --output evaluation_results.json
+```
+
+Run external-service smoke checks when the corresponding service is configured:
+
+```bash
+python scripts/ollama_smoke.py
+python scripts/openrouter_smoke.py
+python scripts/qdrant_smoke.py
 ```
 
 ## Notes

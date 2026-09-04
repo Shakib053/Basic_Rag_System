@@ -56,7 +56,7 @@ from ragas.metrics import (
 from ragas.dataset_schema import SingleTurnSample, EvaluationDataset
 
 from chat import get_rag_response, hybrid_retriever
-from hybrid_retrieval import rerank_documents
+from retrieval.hybrid_retrieval import rerank_documents
 from embeddings.text_embeddings import get_text_embedding_model
 
 # Configuration
@@ -189,7 +189,7 @@ def build_evaluation_dataset(
 
         # Get retrieved contexts for context-based metrics
         # We need to manually run retrieval to capture the contexts
-        from query_enhancement import rewrite_query
+        from retrieval.query_enhancement import rewrite_query
         from chat import retrieval_llm, FINAL_CONTEXT_DOCS, image_vectorstore, get_image_docs_with_scores
 
         try:

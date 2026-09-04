@@ -23,7 +23,7 @@ import argparse
 
 from dotenv import load_dotenv
 
-from ingestion.store import verify_chroma_native_bindings
+from vectorstore.chroma_store import verify_chroma_native_bindings
 from ingestion.text_pipeline import run_text_pipeline
 from ingestion.image_pipeline import run_image_pipeline
 

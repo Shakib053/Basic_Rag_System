@@ -14,10 +14,10 @@ from pathlib import Path
 
 from langchain_huggingface import HuggingFaceEmbeddings
 
-from hybrid_retrieval import load_documents, split_documents_with_ids
-from recursive_chunking import RECURSIVE_STRATEGY, build_recursive_chunker
+from retrieval.hybrid_retrieval import load_documents, split_documents_with_ids
+from chunking.recursive_chunking import RECURSIVE_STRATEGY, build_recursive_chunker
 from embeddings.text_embeddings import get_text_embedding_model
-from ingestion.text_vectorstore import (
+from vectorstore.qdrant_store import (
     get_qdrant_collection_name,
     rebuild_text_vectorstore,
 )

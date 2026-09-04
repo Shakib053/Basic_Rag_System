@@ -5,7 +5,7 @@ from typing import Sequence
 
 from langchain_core.documents import Document
 
-from image_retrieval import format_image_context
+from .image_retrieval import format_image_context
 
 
 def _source_header(doc: Document) -> str:

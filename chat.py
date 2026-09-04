@@ -6,22 +6,23 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
-from context_formatting import build_combined_context
+from prompts.answer import ANSWER_SYSTEM_PROMPT
+from retrieval.context_formatting import build_combined_context
 from embeddings.text_embeddings import get_text_embedding_model
-from hybrid_retrieval import (
+from retrieval.hybrid_retrieval import (
     _load_documents_from_vectorstore,
     build_hybrid_retriever,
     select_final_context_documents,
 )
 
-from image_retrieval import (
+from retrieval.image_retrieval import (
     format_image_references,
     get_image_docs_with_scores,
     load_image_vectorstore,
 )
 
-from query_enhancement import build_multi_query_retriever, rewrite_query
-from ingestion.text_vectorstore import load_text_vectorstore
+from retrieval.query_enhancement import build_multi_query_retriever, rewrite_query
+from vectorstore.qdrant_store import load_text_vectorstore
 
 load_dotenv()
 HF_TOKEN = os.getenv("HF_TOKEN")
@@ -101,15 +102,6 @@ else:
         timeout=LLM_TIMEOUT_SECONDS,
         max_retries=1,
     )
-
-ANSWER_SYSTEM_PROMPT = """You are a helpful AI assistant that answers questions over the user's indexed local documents (notes, profiles, books, PDFs, and Word documents).
-If the user asks about your identity, your capabilities, or what you do, explain that you are an AI assistant that searches and answers questions about the contents of the user's documents.
-If the context below does not contain the answer, say so plainly.
-Otherwise, use ONLY the context below to answer.
-If the user's question contains an unclear pronoun such as he, she, they, it, his, her, or their, do not guess the person or entity. Answer from the retrieved evidence and group or label the answer by source document when that helps avoid ambiguity.
-Do not infer that first-person text in one document belongs to a named person from another document unless the same retrieved context clearly links them.
-Context:
-{context}"""
 
 prompt = ChatPromptTemplate.from_messages([
     ("system", ANSWER_SYSTEM_PROMPT),
