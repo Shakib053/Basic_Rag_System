@@ -8,3 +8,6 @@ chroma_db/
 .chroma_db.backup-*
 _test.py
 image_chroma_db/
+data/*
+evaluation_results.json
+:memory:.ses

@@ -1,0 +1,12 @@
+{
+  "models": {
+    "cross-encoder/ms-marco-MiniLM-L-6-v2": {
+      "threshold": -5.0740085,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "sample_count": 20,
+      "calibrated_at": "2026-09-05T00:00:00+06:00"
+    }
+  }
+}

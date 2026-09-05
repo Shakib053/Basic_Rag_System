@@ -3,7 +3,7 @@ ingestion/text_pipeline.py
 
 Text ingestion pipeline.
 
-Loads .txt and .pdf files from the data directory, chunks them using either
+Loads supported document files from the data directory, chunks them using either
 semantic or recursive strategy, embeds with HuggingFace, and rebuilds the
 configured text vector store.
 """
@@ -17,9 +17,12 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from retrieval.hybrid_retrieval import load_documents, split_documents_with_ids
 from chunking.recursive_chunking import RECURSIVE_STRATEGY, build_recursive_chunker
 from embeddings.text_embeddings import get_text_embedding_model
+from ingestion.document_loader import load_document_file
+from ingestion.models import IngestionResult, IngestionStatus
 from vectorstore.qdrant_store import (
     get_qdrant_collection_name,
     rebuild_text_vectorstore,
+    upsert_document_chunks,
 )
 
 
@@ -97,7 +100,7 @@ def run_text_pipeline(strategy: str | None = None) -> bool:
     source_documents = load_documents(DATA_DIR)
 
     if not source_documents:
-        print("⚠  No .txt/.pdf documents found — skipping text pipeline.")
+        print("⚠  No supported documents found — skipping text pipeline.")
         return False
 
     # Pre-split long documents so the semantic chunker never creates
@@ -126,3 +129,32 @@ def run_text_pipeline(strategy: str | None = None) -> bool:
 
     print(f"Text data stored in Qdrant collection '{get_qdrant_collection_name()}'")
     return True
+
+
+def ingest_file(path: str | Path, strategy: str | None = None) -> IngestionResult:
+    """Incrementally create or replace the chunks for one local document."""
+    strategy = get_chunking_strategy(strategy)
+    source_documents, warnings = load_document_file(path)
+    embedding_model = get_text_embedding_model()
+
+    if strategy == DEFAULT_CHUNKING_STRATEGY:
+        from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+        pre_splitter = RecursiveCharacterTextSplitter(chunk_size=1500, chunk_overlap=200)
+        source_documents = pre_splitter.split_documents(source_documents)
+
+    splitter = build_chunker(strategy, embedding_model)
+    chunks = split_documents_with_ids(
+        source_documents,
+        splitter,
+        chunking_strategy=strategy,
+    )
+    changed = upsert_document_chunks(chunks, embedding_model)
+    first = source_documents[0]
+    return IngestionResult(
+        document_id=str(first.metadata["document_id"]),
+        file_name=str(first.metadata["file_name"]),
+        status=IngestionStatus.INDEXED if changed else IngestionStatus.UNCHANGED,
+        chunk_count=len(chunks),
+        warnings=warnings,
+    )
