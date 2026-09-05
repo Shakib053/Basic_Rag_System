@@ -55,8 +55,9 @@ from ragas.metrics import (
 )
 from ragas.dataset_schema import SingleTurnSample, EvaluationDataset
 
-from chat import get_hybrid_retriever, get_rag_response
+from chat import get_rag_response
 from retrieval.hybrid_retrieval import rerank_documents
+from retrieval.query_enhancement import plan_queries, unique_documents
 from embeddings.text_embeddings import get_text_embedding_model
 
 # Configuration
@@ -90,13 +91,6 @@ def run_with_timeout(label: str, timeout_seconds: int, func):
     finally:
         signal.setitimer(signal.ITIMER_REAL, 0)
         signal.signal(signal.SIGALRM, previous_handler)
-
-
-def invoke_single_query_retriever(query: str):
-    """Use the wrapped base retriever so eval context capture does not call the LLM again."""
-    hybrid_retriever = get_hybrid_retriever()
-    base_retriever = getattr(hybrid_retriever, "retriever", hybrid_retriever)
-    return base_retriever.invoke(query)
 
 
 @dataclass
@@ -190,34 +184,28 @@ def build_evaluation_dataset(
 
         # Get retrieved contexts for context-based metrics
         # We need to manually run retrieval to capture the contexts
-        from retrieval.query_enhancement import rewrite_query
-        from chat import retrieval_llm, FINAL_CONTEXT_DOCS, image_vectorstore, get_image_docs_with_scores
+        from chat import retrieval_llm, FINAL_CONTEXT_DOCS, get_hybrid_docs
 
         try:
             started = time.perf_counter()
             log_step("  Rewriting query for context capture...")
-            standalone = run_with_timeout(
-                "query rewrite",
+            query_plan = run_with_timeout(
+                "query planning",
                 RAG_PIPELINE_TIMEOUT_SECONDS,
-                lambda: rewrite_query(eval_sample.question, chat_history, retrieval_llm),
+                lambda: plan_queries(eval_sample.question, chat_history, retrieval_llm),
             )
             log_step("  Retrieving text contexts...")
-            candidate_docs = run_with_timeout(
+            candidate_groups = run_with_timeout(
                 "text context retrieval",
                 RAG_PIPELINE_TIMEOUT_SECONDS,
-                lambda: invoke_single_query_retriever(standalone),
+                lambda: [get_hybrid_docs(query) for query in query_plan.queries],
             )
-            log_step("  Retrieving image contexts...")
-            image_results = run_with_timeout(
-                "image context retrieval",
-                RAG_PIPELINE_TIMEOUT_SECONDS,
-                lambda: get_image_docs_with_scores(standalone, image_vectorstore),
-            )
+            candidate_docs = unique_documents(candidate_groups)
             log_step("  Reranking text contexts...")
             docs = run_with_timeout(
                 "text context reranking",
                 RAG_PIPELINE_TIMEOUT_SECONDS,
-                lambda: rerank_documents(standalone, candidate_docs, top_k=FINAL_CONTEXT_DOCS),
+                lambda: rerank_documents(query_plan.queries[-1], candidate_docs, top_k=FINAL_CONTEXT_DOCS),
             )
             log_step(f"  Context capture completed in {time.perf_counter() - started:.1f}s")
 

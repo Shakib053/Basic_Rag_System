@@ -18,7 +18,7 @@
   ],
   "metadata": {
     "description": "Ground truth QA pairs for RAGAS evaluation of Personal RAG Assistant",
-    "source_documents": ["Personal_info.txt", "Projects.txt", "Travel_history.txt"],
+    "source_documents": ["Kazi_Tanjim_Shakib_Personal_Profile.txt", "Kazi_Tanjim_Shakib_Project_Portfolio.txt", "Travel_history.txt"],
     "total_samples": 3,
     "categories": {
       "personal_info": 1,

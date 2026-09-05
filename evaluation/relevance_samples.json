@@ -1,0 +1,26 @@
+{
+  "model_name": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+  "description": "Initial local-corpus baseline. Regenerate scores after material corpus or model changes.",
+  "samples": [
+    {"query": "What is Kazi Tanjim Shakib current job title and employer?", "relevant": true, "score": 4.893037},
+    {"query": "Which travel destinations received a 10 out of 10 rating?", "relevant": true, "score": -2.972749},
+    {"query": "What is the Salah app?", "relevant": true, "score": 4.874197},
+    {"query": "What is the MLX-SwiftUI project?", "relevant": true, "score": 5.517797},
+    {"query": "What awards has Kazi Tanjim Shakib received?", "relevant": true, "score": 7.842205},
+    {"query": "Which countries has Kazi Tanjim Shakib visited?", "relevant": true, "score": 5.542928},
+    {"query": "What does the Basic RAG System project do?", "relevant": true, "score": 4.792799},
+    {"query": "Who published World Health Statistics 2024?", "relevant": true, "score": 8.641834},
+    {"query": "What trends does World Health Statistics 2024 report?", "relevant": true, "score": 7.971313},
+    {"query": "Summarize the travel history in the uploaded files.", "relevant": true, "score": -1.794206},
+    {"query": "What is the capital of France?", "relevant": false, "score": -11.035259},
+    {"query": "What is the weather in Dhaka today?", "relevant": false, "score": -7.175268},
+    {"query": "Write a Python merge sort implementation.", "relevant": false, "score": -8.396355},
+    {"query": "Give me a chocolate cake recipe.", "relevant": false, "score": -11.003157},
+    {"query": "Who is the current president of the United States?", "relevant": false, "score": -10.748269},
+    {"query": "What are the specifications of the newest iPhone?", "relevant": false, "score": -10.417287},
+    {"query": "Explain quantum entanglement.", "relevant": false, "score": -11.247932},
+    {"query": "Calculate compound interest on 5000 dollars.", "relevant": false, "score": -10.631441},
+    {"query": "Summarize Hamlet by Shakespeare.", "relevant": false, "score": -10.793455},
+    {"query": "What was the latest FIFA World Cup score?", "relevant": false, "score": -9.823475}
+  ]
+}

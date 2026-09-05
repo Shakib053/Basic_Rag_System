@@ -1,144 +1,25 @@
 from __future__ import annotations
 
 from functools import lru_cache
+import os
 from pathlib import Path
-from typing import Any, Sequence
-import warnings
+from typing import Sequence
 
-from langchain_community.document_loaders import Docx2txtLoader, PyMuPDFLoader
-from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
-from langchain_classic.retrievers import EnsembleRetriever
 from sentence_transformers import CrossEncoder
 
-RERANKER_MODEL_NAME = "cross-encoder/ms-marco-MiniLM-L-6-v2"
-SUPPORTED_FILE_TYPES = {".txt", ".pdf", ".docx"}
-ORIGINAL_PAGE_CONTENT_KEY = "_original_page_content"
+from ingestion.document_loader import load_documents_from_directory
 
-def _clean_pdf_headers(pages: list[Document]) -> list[Document]:
-    """Detect and strip repeating header lines across multi-page PDFs."""
-    if len(pages) <= 1:
-        return pages
 
-    header_candidates: dict[str, int] = {}
-    for page in pages:
-        lines = [line.strip() for line in page.page_content.splitlines() if line.strip()]
-        if lines:
-            for line in lines[:2]:
-                header_candidates[line] = header_candidates.get(line, 0) + 1
-
-    threshold = max(1, len(pages) // 2)
-    common_headers = {line for line, count in header_candidates.items() if count > threshold}
-
-    if not common_headers:
-        return pages
-
-    cleaned_pages = []
-    for page in pages:
-        lines = page.page_content.splitlines()
-        cleaned_lines = [line for line in lines if line.strip() not in common_headers]
-        cleaned_content = "\n".join(cleaned_lines).strip()
-        if cleaned_content:
-            page.page_content = cleaned_content
-            cleaned_pages.append(page)
-
-    return cleaned_pages
+RERANKER_MODEL_NAME = os.getenv(
+    "RERANKER_MODEL_NAME",
+    "cross-encoder/ms-marco-MiniLM-L-6-v2",
+)
 
 def load_documents(data_dir: str | Path) -> list[Document]:
-    data_path = Path(data_dir)
-    documents: list[Document] = []
-
-    supported_files = sorted(
-        (path for path in data_path.iterdir() if path.is_file() and path.suffix.lower() in SUPPORTED_FILE_TYPES),
-        key=lambda path: path.name.lower(),
-    )
-
-    for file_path in supported_files:
-        file_type = file_path.suffix.lower().lstrip(".")
-
-        if file_type == "txt":
-            text = file_path.read_text(encoding="utf-8")
-            if text.strip():
-                documents.append(
-                    Document(
-                        page_content=text,
-                        metadata={
-                            "source": str(file_path),
-                            "file_name": file_path.name,
-                            "file_type": file_type,
-                        },
-                    )
-                )
-            continue
-
-        if file_type == "docx":
-            try:
-                word_documents = Docx2txtLoader(str(file_path)).load()
-            except Exception as exc:
-                warnings.warn(
-                    f"Skipping unreadable Word document '{file_path}': {exc}",
-                    stacklevel=2,
-                )
-                continue
-
-            readable_documents = 0
-            for document in word_documents:
-                if not document.page_content.strip():
-                    continue
-
-                document.metadata.update(
-                    {
-                        "source": str(file_path),
-                        "file_name": file_path.name,
-                        "file_type": file_type,
-                    }
-                )
-                documents.append(document)
-                readable_documents += 1
-
-            if readable_documents == 0:
-                warnings.warn(
-                    f"Skipping Word document with no extractable text: '{file_path}'",
-                    stacklevel=2,
-                )
-            continue
-
-        try:
-            pdf_pages = PyMuPDFLoader(
-                str(file_path),
-                mode="page",
-                extract_tables="markdown",
-            ).load()
-        except Exception as exc:
-            warnings.warn(
-                f"Skipping unreadable PDF '{file_path}': {exc}",
-                stacklevel=2,
-            )
-            continue
-
-        pdf_pages = _clean_pdf_headers(pdf_pages)
-
-        readable_pages = 0
-        for page in pdf_pages:
-            if not page.page_content.strip():
-                continue
-
-            page.metadata.update(
-                {
-                    "source": str(file_path),
-                    "file_name": file_path.name,
-                    "file_type": file_type,
-                }
-            )
-            documents.append(page)
-            readable_pages += 1
-
-        if readable_pages == 0:
-            warnings.warn(
-                f"Skipping PDF with no extractable text: '{file_path}'",
-                stacklevel=2,
-            )
-
+    documents, warnings = load_documents_from_directory(data_dir)
+    for warning in warnings:
+        print(f"Warning: {warning}")
     return documents
 
 def split_documents_with_ids(
@@ -152,9 +33,9 @@ def split_documents_with_ids(
 
     for document in documents:
         document_chunks = splitter.split_documents([document])
-        source = document.metadata.get("source", "unknown")
-        page = document.metadata.get("page")
-        location = f"{source}::page-{page}" if page is not None else source
+        document_id = document.metadata.get("document_id", "unknown")
+        source_locator = document.metadata.get("source_locator", "document")
+        location = f"{document_id}::{source_locator}"
 
         for chunk in document_chunks:
             index = location_counters.get(location, 0)
@@ -169,61 +50,14 @@ def split_documents_with_ids(
 
     return chunks
 
-def _load_chroma_documents(vectorstore: Any) -> list[Document]:
-    stored = vectorstore.get()
-    return [
-        Document(page_content=text, metadata=meta or {})
-        for text, meta in zip(stored.get("documents", []), stored.get("metadatas", []))
-    ]
-
-
-def _load_qdrant_documents(vectorstore: Any) -> list[Document]:
-    documents: list[Document] = []
-    offset = None
-    content_key = getattr(vectorstore, "content_payload_key", "page_content")
-    metadata_key = getattr(vectorstore, "metadata_payload_key", "metadata")
-
-    while True:
-        points, offset = vectorstore.client.scroll(
-            collection_name=vectorstore.collection_name,
-            limit=100,
-            offset=offset,
-            with_payload=True,
-            with_vectors=False,
-        )
-        for point in points:
-            payload = point.payload or {}
-            content = payload.get(content_key)
-            if not content:
-                continue
-            documents.append(
-                Document(
-                    page_content=content,
-                    metadata=payload.get(metadata_key) or {},
-                )
-            )
-        if offset is None:
-            break
-
-    return documents
-
-
-def _load_documents_from_vectorstore(vectorstore: Any) -> list[Document]:
-    if hasattr(vectorstore, "get"):
-        return _load_chroma_documents(vectorstore)
-
-    if hasattr(vectorstore, "client") and hasattr(vectorstore, "collection_name"):
-        return _load_qdrant_documents(vectorstore)
-
-    raise TypeError("Unsupported vector store: expected Chroma or QdrantVectorStore.")
-
-
 def _metadata_search_terms(document: Document) -> str:
     metadata = document.metadata
     values = [
         metadata.get("file_name"),
         metadata.get("source"),
         metadata.get("file_type"),
+        metadata.get("source_locator"),
+        metadata.get("sheet_name"),
     ]
     terms = []
     for value in values:
@@ -235,50 +69,21 @@ def _metadata_search_terms(document: Document) -> str:
     return " ".join(terms)
 
 
-def _document_for_keyword_search(document: Document) -> Document:
-    metadata = dict(document.metadata)
-    metadata[ORIGINAL_PAGE_CONTENT_KEY] = document.page_content
-    retrieval_text = (
-        f"{_metadata_search_terms(document)}\n\n{document.page_content}"
-    ).strip()
-    return Document(page_content=retrieval_text, metadata=metadata)
-
-
-def _build_bm25_retriever_from_vectorstore(vectorstore: Any, *, k: int) -> BM25Retriever:
-    documents = [
-        _document_for_keyword_search(document)
-        for document in _load_documents_from_vectorstore(vectorstore)
-    ]
-    bm25_retriever = BM25Retriever.from_documents(documents)
-    bm25_retriever.k = k
-    return bm25_retriever
-
 def build_hybrid_retriever(
-    vectorstore: Any,
+    vectorstore,
     *,
-    semantic_k: int = 12,
-    keyword_k: int = 12,
-    semantic_weight: float = 0.5,
-    keyword_weight: float = 0.5,
-) -> EnsembleRetriever:
-    semantic_retriever = vectorstore.as_retriever(
-        search_type="mmr",
-        search_kwargs={
-            "k": semantic_k,
-            "fetch_k": 20,
-            "lambda_mult": 0.5,
-        }
-    )
-    
-    keyword_retriever = _build_bm25_retriever_from_vectorstore(vectorstore, k=keyword_k)
-    return EnsembleRetriever(
-        retrievers=[semantic_retriever, keyword_retriever],
-        weights=[semantic_weight, keyword_weight],
+    k: int = 20,
+):
+    """Build a retriever over a Qdrant collection configured for hybrid RRF."""
+    return vectorstore.as_retriever(
+        search_type="similarity",
+        search_kwargs={"k": k},
     )
 
 @lru_cache(maxsize=1)
 def _load_reranker(model_name: str = RERANKER_MODEL_NAME) -> CrossEncoder:
-    return CrossEncoder(model_name)
+    offline = os.getenv("HF_HUB_OFFLINE", "0").strip().lower() in {"1", "true", "yes"}
+    return CrossEncoder(model_name, local_files_only=offline)
 
 def rerank_documents(
     query: str,
@@ -293,11 +98,6 @@ def rerank_documents(
     unique_documents: list[Document] = []
     seen_documents = set()
     for document in documents:
-        original_content = document.metadata.pop(
-            ORIGINAL_PAGE_CONTENT_KEY,
-            document.page_content,
-        )
-        document.page_content = original_content
         identity = _document_identity(document)
         if identity == (None, None, None):
             identity = (None, None, hash(document.page_content))
@@ -342,23 +142,10 @@ def select_final_context_documents(
     candidate_documents: Sequence[Document],
     *,
     rerank_top_k: int = 5,
-    preserve_top_k: int = 2,
 ) -> list[Document]:
-    """Return reranked documents plus the strongest first-pass retrieval hits."""
-    reranked_documents = rerank_documents(
+    """Return only cross-encoder-reranked documents."""
+    return rerank_documents(
         query,
         candidate_documents,
         top_k=rerank_top_k,
     )
-
-    selected_documents = list(reranked_documents)
-    selected_ids = {_document_identity(document) for document in selected_documents}
-
-    for document in candidate_documents[:preserve_top_k]:
-        identity = _document_identity(document)
-        if identity in selected_ids:
-            continue
-        selected_documents.append(document)
-        selected_ids.add(identity)
-
-    return selected_documents

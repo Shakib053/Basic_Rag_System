@@ -1,8 +1,11 @@
 from __future__ import annotations
 
-import re
+import os
+import json
 from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
+from typing import Sequence
 
 
 class QueryMode(str, Enum):
@@ -16,51 +19,76 @@ class QueryRoute:
     reason: str
 
 
-EXPLICIT_RETRIEVAL_PATTERN = re.compile(
-    r"\b(according to|based on|uploaded|indexed)\b|"
-    r"\b(my|our|this|that|the)\s+"
-    r"(documents?|files?|books?|pdfs?|notes?|profiles?|resumes?|"
-    r"reports?|papers?|articles?|data)\b",
-    re.IGNORECASE,
-)
-DOCUMENT_REFERENCE_PATTERN = re.compile(
-    r"\b(document|file|book|pdf|chapter|page|notes?|profile|resume|"
-    r"report|paper|article|dataset)\b",
-    re.IGNORECASE,
-)
-DIRECT_TASK_PATTERN = re.compile(
-    r"^\s*(write|draft|generate|create|compose|code|implement|debug|"
-    r"translate|rewrite|proofread|calculate|compute|solve|brainstorm|"
-    r"explain|define|teach|summari[sz]e|format|convert|plan|suggest|list)\b|"
-    r"^\s*(can|could|would)\s+you\s+"
-    r"(write|draft|generate|create|compose|code|implement|debug|"
-    r"translate|rewrite|proofread|calculate|compute|solve|brainstorm|"
-    r"explain|define|teach|summari[sz]e|format|convert|plan|suggest|list)\b",
-    re.IGNORECASE,
-)
-MATH_PATTERN = re.compile(
-    r"^\s*(what is|calculate|compute|solve)\b.*\d.*[+\-*/=]",
-    re.IGNORECASE,
-)
+DEFAULT_RERANKER_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+THRESHOLD_CONFIG_PATH = Path(__file__).with_name("relevance_thresholds.json")
+
+
+def get_relevance_threshold() -> float:
+    """Return the threshold calibrated for the configured reranker model."""
+    override = os.getenv("RERANK_RELEVANCE_THRESHOLD")
+    if override is not None:
+        return float(override)
+    model_name = os.getenv("RERANKER_MODEL_NAME", DEFAULT_RERANKER_MODEL)
+    try:
+        config = json.loads(THRESHOLD_CONFIG_PATH.read_text(encoding="utf-8"))
+        return float(config["models"][model_name]["threshold"])
+    except (FileNotFoundError, KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise RuntimeError(
+            f"No calibrated relevance threshold is configured for reranker '{model_name}'."
+        ) from exc
 
 
 def route_query(question: str) -> QueryRoute:
-    """Choose whether a question should use the LLM directly or retrieve data.
+    """Route every natural-language request through corpus retrieval first."""
+    if not question.strip():
+        raise ValueError("Question cannot be empty.")
+    return QueryRoute(QueryMode.RETRIEVE, "corpus-first routing")
 
-    Retrieval is the conservative default because this application is primarily
-    a document question-answering system. Explicit document references always
-    take priority over direct-task wording.
+
+def route_retrieval_result(
+    documents: Sequence[object],
+    *,
+    threshold: float | None = None,
+) -> QueryRoute:
+    """Choose a final route after reranking retrieved documents.
+
+    The configured boundary must be calibrated against the configured reranker.
     """
-    if EXPLICIT_RETRIEVAL_PATTERN.search(question):
-        return QueryRoute(QueryMode.RETRIEVE, "explicit document or data reference")
+    scores = []
+    for document in documents:
+        metadata = getattr(document, "metadata", {})
+        score = metadata.get("rerank_score") if isinstance(metadata, dict) else None
+        if isinstance(score, (int, float)):
+            scores.append(float(score))
 
-    if DOCUMENT_REFERENCE_PATTERN.search(question):
-        return QueryRoute(QueryMode.RETRIEVE, "document-related wording")
+    if not scores:
+        return QueryRoute(QueryMode.DIRECT, "no reranked document match")
 
-    if DIRECT_TASK_PATTERN.search(question):
-        return QueryRoute(QueryMode.DIRECT, "general-purpose task wording")
+    best_score = max(scores)
+    relevance_threshold = get_relevance_threshold() if threshold is None else threshold
+    if best_score < relevance_threshold:
+        return QueryRoute(
+            QueryMode.DIRECT,
+            f"no relevant document match (best rerank score: {best_score:.2f})",
+        )
 
-    if MATH_PATTERN.search(question):
-        return QueryRoute(QueryMode.DIRECT, "arithmetic or mathematical question")
+    return QueryRoute(
+        QueryMode.RETRIEVE,
+        f"relevant document match (best rerank score: {best_score:.2f})",
+    )
 
-    return QueryRoute(QueryMode.RETRIEVE, "retrieval is the safe default")
+
+def relevant_documents(
+    documents: Sequence[object],
+    *,
+    threshold: float | None = None,
+) -> list[object]:
+    """Return only reranked documents that meet the relevance boundary."""
+    relevance_threshold = get_relevance_threshold() if threshold is None else threshold
+    return [
+        document
+        for document in documents
+        if isinstance(getattr(document, "metadata", None), dict)
+        and isinstance(document.metadata.get("rerank_score"), (int, float))
+        and float(document.metadata["rerank_score"]) >= relevance_threshold
+    ]

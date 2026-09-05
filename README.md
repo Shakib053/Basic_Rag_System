@@ -1,18 +1,19 @@
 # Local Document RAG Assistant
 
-A terminal-based Retrieval-Augmented Generation (RAG) assistant for querying local `.txt`, `.docx`, and text-extractable PDF files. It builds a text index in Qdrant, optionally extracts PDF images into a CLIP-powered Chroma index, and answers questions using either Ollama or OpenRouter-compatible chat models.
+A terminal-based Retrieval-Augmented Generation (RAG) assistant for querying local, text-extractable documents. It incrementally builds a dense+sparse hybrid index in Qdrant and answers from cited document evidence, with an explicit general-knowledge fallback when the corpus has no relevant evidence.
 
 ## Features
 
-- Ingests local `.txt`, `.docx`, and `.pdf` files from `data/`
+- Ingests `.txt`, `.md`, `.pdf`, `.docx`, `.pptx`, `.html`, `.csv`, and `.xlsx`
 - Supports semantic chunking by default, with recursive chunking as an option
 - Stores text embeddings in Qdrant using `sentence-transformers/all-MiniLM-L6-v2`
-- Combines Qdrant MMR semantic search with BM25 keyword retrieval
-- Rewrites follow-up questions conservatively and expands queries for stronger recall
-- Routes clear general-purpose tasks directly to the LLM and document questions through retrieval
+- Combines dense and BM25 sparse vectors in Qdrant using reciprocal-rank fusion
+- Produces validated 1–3 query plans while always retaining the original request
+- Searches the corpus first, then chooses a grounded answer or a clearly labeled general fallback
 - Reranks retrieved text with `cross-encoder/ms-marco-MiniLM-L-6-v2`
-- Extracts embedded PDF images and retrieves image references with CLIP + Chroma
-- Instructs the answer model not to guess ambiguous pronouns such as "he" or "she"
+- Emits inline file/page/slide/sheet citations and rejects invented citation IDs
+- Treats document text as untrusted data rather than model instructions
+- Supports incremental upload, replacement, listing, deletion, and document-scoped search
 - Includes RAGAS evaluation support with `eval_dataset.json`
 
 ## Project Structure
@@ -60,7 +61,12 @@ Create `.env`:
 ```text
 QDRANT_URL=your_qdrant_url
 QDRANT_API_KEY=your_qdrant_api_key
-QDRANT_TEXT_COLLECTION=rag_text
+QDRANT_TEXT_COLLECTION=rag_text_v2
+SPARSE_EMBEDDING_MODEL=Qdrant/bm25
+# Optional override for the checked-in calibrated model threshold:
+# RERANK_RELEVANCE_THRESHOLD=-5.0740085
+# Set to 1 when all Hugging Face models are already cached:
+# HF_HUB_OFFLINE=1
 
 LLM_PROVIDER=ollama
 OLLAMA_MODEL=qwen3:1.7b
@@ -81,7 +87,7 @@ python -m pip install -r requirements.txt
 
 ## Usage
 
-Add documents to `data/`, then rebuild indexes:
+The v2 collection has a different dense+sparse schema. Add documents to `data/`, then perform a one-time rebuild when migrating from the old `rag_text` collection:
 
 ```bash
 python -m ingestion.run
@@ -101,10 +107,28 @@ Start chat:
 python chat.py
 ```
 
+Inside chat, documents can be managed incrementally without rebuilding the collection:
+
+```text
+/upload "/absolute/path/to/report.pdf"
+/documents
+/use <document_id> [document_id ...]
+/use all
+/delete <document_id>
+```
+
 Run evaluation:
 
 ```bash
 python -m evaluation.ragas_eval --mode full --dataset eval_dataset.json --output evaluation_results.json
+```
+
+Recalculate a relevance threshold after changing the reranker or materially changing the corpus. The input contains labeled reranker scores; score collection should use the full query-planning and retrieval path:
+
+```bash
+python -m evaluation.relevance_calibration \
+  evaluation/relevance_samples.json \
+  retrieval/relevance_thresholds.json
 ```
 
 Run external-service smoke checks when the corresponding service is configured:
@@ -117,7 +141,9 @@ python scripts/qdrant_smoke.py
 
 ## Notes
 
-- Re-run ingestion after adding or changing files in `data/`.
-- Ambiguous pronouns are not mapped to a person unless chat history or retrieved context clearly identifies that subject.
-- Image retrieval returns references to extracted images; final answers are grounded primarily in retrieved text context.
+- `/upload` replaces chunks when the same canonical local path changes and is a no-op when its content hash is unchanged.
+- The default upload limit is 50 MiB and can be changed with `MAX_UPLOAD_BYTES`.
+- Scanned/image-only files, OCR, audio/video, archives, and chart understanding are not supported.
+- The existing image extraction pipeline remains optional, but image paths are never treated as textual answer evidence.
+- The included relevance calibration is an initial 20-query local-corpus baseline; expand it with held-out genre-specific examples before treating its quality metrics as an SLA.
 - Generated image data is stored in `data/extracted_images/` and `image_chroma_db/`.
