@@ -302,6 +302,7 @@ def answer_query(question, chat_history=None, *, document_ids=None) -> AnswerRes
         citations=citations,
         retrieval_queries=plan.queries,
         reason=retrieval_route.reason,
+        context_documents=list(docs),
     )
 
 
@@ -310,7 +311,34 @@ def get_rag_response(question, chat_history):
     return answer_query(question, chat_history).text
 
 
+def _sources_from_documents(docs) -> list[dict]:
+    """Map context chunks to one source entry per file and page.
+
+    Docs arrive sorted by rerank score, so the first chunk seen for a
+    file/page carries that page's best score.
+    """
+    sources = []
+    seen = set()
+    for doc in docs:
+        file_name = doc.metadata.get("file_name", "unknown file")
+        page = doc.metadata.get("page")
+        page = page + 1 if isinstance(page, int) else None  # stored 0-based
+        if (file_name, page) in seen:
+            continue
+        seen.add((file_name, page))
+        score = doc.metadata.get("rerank_score")
+        sources.append({
+            "document": file_name,
+            "page": page,
+            "score": round(float(score), 4) if score is not None else None,
+        })
+    return sources
+
+
 def ask_question(query: str) -> dict:
     """Answer one question with the full RAG pipeline (no chat history)."""
     result = answer_query(query, [])
-    return {"answer": result.text}
+    return {
+        "answer": result.text,
+        "sources": _sources_from_documents(result.context_documents),
+    }

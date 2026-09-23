@@ -19,6 +19,17 @@ class ChatRequest(BaseModel):
     query: str
 
 
+class Source(BaseModel):
+    document: str
+    page: int | None = None  # 1-based; only PDFs have pages
+    score: float | None = None  # raw cross-encoder rerank score, higher is more relevant
+
+
+class ChatResponse(BaseModel):
+    answer: str
+    sources: list[Source] = []
+
+
 @app.get("/health")
 def health():
     return {
@@ -26,7 +37,7 @@ def health():
     }
 
 
-@app.post("/chat")
+@app.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest):
 
     result = ask_question(

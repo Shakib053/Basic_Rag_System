@@ -68,6 +68,7 @@ class AnswerPipelineTests(unittest.TestCase):
         self.assertNotIn("S99", result.text)
         self.assertIn("[S1]", result.text)
         self.assertEqual([citation.citation_id for citation in result.citations], ["S1"])
+        self.assertEqual(result.context_documents, [document])
 
 
 if __name__ == "__main__":
