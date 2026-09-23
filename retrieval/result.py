@@ -26,6 +26,8 @@ class AnswerResult:
     citations: list[SourceCitation] = field(default_factory=list)
     retrieval_queries: list[str] = field(default_factory=list)
     reason: str = ""
+    # Reranked chunks that were passed to the LLM as context (grounded answers only).
+    context_documents: list = field(default_factory=list)
 
 
 _CITATION_PATTERN = re.compile(r"\[(S\d+)(?:,[^\]]*)?\]")
