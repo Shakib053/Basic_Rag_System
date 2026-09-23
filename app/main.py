@@ -1,8 +1,13 @@
+import logging
+
 from fastapi import FastAPI
 from pydantic import BaseModel
 
 from app.services.rag_service import ask_question
 
+
+logging.basicConfig(format="%(levelname)s:     %(message)s")
+logging.getLogger("app.services.rag_service").setLevel(logging.INFO)
 
 app = FastAPI(
     title="Basic RAG API",
