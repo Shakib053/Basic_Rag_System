@@ -55,7 +55,7 @@ from ragas.metrics import (
 )
 from ragas.dataset_schema import SingleTurnSample, EvaluationDataset
 
-from chat import get_rag_response
+from app.services.rag_service import get_rag_response
 from retrieval.hybrid_retrieval import rerank_documents
 from retrieval.query_enhancement import plan_queries, unique_documents
 from embeddings.text_embeddings import get_text_embedding_model
@@ -184,7 +184,7 @@ def build_evaluation_dataset(
 
         # Get retrieved contexts for context-based metrics
         # We need to manually run retrieval to capture the contexts
-        from chat import retrieval_llm, FINAL_CONTEXT_DOCS, get_hybrid_docs
+        from app.services.rag_service import retrieval_llm, FINAL_CONTEXT_DOCS, get_hybrid_docs
 
         try:
             started = time.perf_counter()

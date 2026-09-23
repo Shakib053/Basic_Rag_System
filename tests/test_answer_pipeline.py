@@ -5,6 +5,7 @@ from langchain_core.documents import Document
 from langchain_core.language_models.fake_chat_models import FakeListChatModel
 
 import chat
+from app.services import rag_service
 from retrieval.query_enhancement import QueryPlan
 from retrieval.result import AnswerMode
 
@@ -22,21 +23,21 @@ class AnswerPipelineTests(unittest.TestCase):
     def test_empty_store_uses_explicit_general_fallback(self):
         model = FakeListChatModel(responses=["Paris is the capital of France."])
         with (
-            patch.object(chat, "answer_llm", model),
-            patch.object(chat, "get_query_plan", return_value=QueryPlan(["Capital of France?"])),
-            patch.object(chat, "text_collection_exists", return_value=False),
+            patch.object(rag_service, "answer_llm", model),
+            patch.object(rag_service, "get_query_plan", return_value=QueryPlan(["Capital of France?"])),
+            patch.object(rag_service, "text_collection_exists", return_value=False),
         ):
-            result = chat.answer_query("Capital of France?")
+            result = rag_service.answer_query("Capital of France?")
 
         self.assertEqual(result.mode, AnswerMode.GENERAL)
         self.assertTrue(result.text.startswith("I couldn’t find support for this"))
 
     def test_retrieval_failure_is_not_reported_as_no_evidence(self):
         with (
-            patch.object(chat, "get_query_plan", return_value=QueryPlan(["question"])),
-            patch.object(chat, "text_collection_exists", side_effect=ConnectionError("secret")),
+            patch.object(rag_service, "get_query_plan", return_value=QueryPlan(["question"])),
+            patch.object(rag_service, "text_collection_exists", side_effect=ConnectionError("secret")),
         ):
-            result = chat.answer_query("question")
+            result = rag_service.answer_query("question")
 
         self.assertEqual(result.mode, AnswerMode.ERROR)
         self.assertNotIn("secret", result.text)
@@ -55,13 +56,13 @@ class AnswerPipelineTests(unittest.TestCase):
         )
         model = FakeListChatModel(responses=["The supported fact [S99]."])
         with (
-            patch.object(chat, "answer_llm", model),
-            patch.object(chat, "get_query_plan", return_value=QueryPlan(["supported fact"])),
-            patch.object(chat, "text_collection_exists", return_value=True),
-            patch.object(chat, "get_hybrid_docs", return_value=[document]),
-            patch.object(chat, "select_final_context_documents", return_value=[document]),
+            patch.object(rag_service, "answer_llm", model),
+            patch.object(rag_service, "get_query_plan", return_value=QueryPlan(["supported fact"])),
+            patch.object(rag_service, "text_collection_exists", return_value=True),
+            patch.object(rag_service, "get_hybrid_docs", return_value=[document]),
+            patch.object(rag_service, "select_final_context_documents", return_value=[document]),
         ):
-            result = chat.answer_query("supported fact")
+            result = rag_service.answer_query("supported fact")
 
         self.assertEqual(result.mode, AnswerMode.GROUNDED)
         self.assertNotIn("S99", result.text)
