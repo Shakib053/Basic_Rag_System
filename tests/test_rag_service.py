@@ -47,6 +47,20 @@ class RagServiceTests(unittest.TestCase):
         })
         answer_query.assert_called_once_with("What is it?", [])
 
+    def test_ask_question_runs_guardrails_around_pipeline(self):
+        result = AnswerResult(text="raw answer", mode=AnswerMode.GENERAL)
+        with (
+            patch.object(rag_service, "check_input", return_value="checked question") as check_input,
+            patch.object(rag_service, "answer_query", return_value=result) as answer_query,
+            patch.object(rag_service, "check_output", return_value="checked answer") as check_output,
+        ):
+            response = rag_service.ask_question("raw question")
+
+        check_input.assert_called_once_with("raw question")
+        answer_query.assert_called_once_with("checked question", [])
+        check_output.assert_called_once_with("raw answer")
+        self.assertEqual(response["answer"], "checked answer")
+
     def test_general_answer_has_no_sources(self):
         result = AnswerResult(text="General.", mode=AnswerMode.GENERAL)
         with patch.object(rag_service, "answer_query", return_value=result):
