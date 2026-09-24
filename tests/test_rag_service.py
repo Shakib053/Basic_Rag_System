@@ -62,6 +62,22 @@ class RagServiceTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), payload)
 
+    def test_chat_endpoint_rejects_blank_query_before_pipeline(self):
+        client = TestClient(main.app)
+        with patch.object(main, "ask_question") as ask_question:
+            for blank in ["", "   "]:
+                response = client.post("/chat", json={"query": blank})
+                self.assertEqual(response.status_code, 422, blank)
+
+        ask_question.assert_not_called()
+
+    def test_chat_endpoint_strips_surrounding_spaces(self):
+        payload = {"answer": "A.", "sources": []}
+        with patch.object(main, "ask_question", return_value=payload) as ask_question:
+            TestClient(main.app).post("/chat", json={"query": "  what is RAG?  "})
+
+        ask_question.assert_called_once_with("what is RAG?")
+
     def test_run_with_timeout_works_off_main_thread(self):
         outcome = _run_in_worker_thread(
             lambda: rag_service.run_with_timeout("fast", 5, lambda: "done")
