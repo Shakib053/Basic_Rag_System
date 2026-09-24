@@ -2,6 +2,7 @@ import logging
 from typing import Annotated
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, StringConstraints
 
 from app.services.rag_service import ask_question
@@ -13,6 +14,14 @@ logging.getLogger("app.services.rag_service").setLevel(logging.INFO)
 app = FastAPI(
     title="Basic RAG API",
     version="0.1.0"
+)
+
+# Let the React dev server (a different port) call this API from the browser.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 

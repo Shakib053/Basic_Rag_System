@@ -1,0 +1,32 @@
+/* Page-wide colors and font. Dark mode colors apply when the OS uses dark mode. */
+:root {
+  --bg: #ffffff;
+  --text: #1f2328;
+  --muted: #656d76;
+  --border: #d0d7de;
+  --panel: #f6f8fa;
+  --accent: #0969da;
+  --error: #cf222e;
+
+  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117;
+    --text: #e6edf3;
+    --muted: #8d96a0;
+    --border: #30363d;
+    --panel: #161b22;
+    --accent: #4493f8;
+    --error: #f85149;
+  }
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+}
