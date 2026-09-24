@@ -1,0 +1,83 @@
+.container {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 48px 16px;
+}
+
+h1 {
+  margin: 0;
+}
+
+.subtitle {
+  margin: 4px 0 24px;
+  color: var(--muted);
+}
+
+.ask-form {
+  display: flex;
+  gap: 8px;
+}
+
+.ask-form input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.ask-form button {
+  padding: 10px 20px;
+  font: inherit;
+  color: #fff;
+  background: var(--accent);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.ask-form button:disabled,
+.ask-form input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.error {
+  color: var(--error);
+}
+
+.answer {
+  margin-top: 24px;
+  padding: 16px 20px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.answer h2 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  color: var(--muted);
+}
+
+.answer-text {
+  margin: 0 0 16px;
+  white-space: pre-wrap; /* keep the line breaks the LLM wrote */
+}
+
+.sources {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.source-name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.source-score {
+  color: var(--muted);
+}

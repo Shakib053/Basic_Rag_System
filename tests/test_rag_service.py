@@ -71,6 +71,16 @@ class RagServiceTests(unittest.TestCase):
 
         ask_question.assert_not_called()
 
+    def test_chat_endpoint_allows_frontend_origin(self):
+        response = TestClient(main.app).options("/chat", headers={
+            "Origin": "http://localhost:5173",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type",
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers["access-control-allow-origin"], "http://localhost:5173")
+
     def test_chat_endpoint_strips_surrounding_spaces(self):
         payload = {"answer": "A.", "sources": []}
         with patch.object(main, "ask_question", return_value=payload) as ask_question:
