@@ -14,6 +14,7 @@ from prompts.answer import (
     GENERAL_FALLBACK_PREFIX,
     GENERAL_FALLBACK_SYSTEM_PROMPT,
 )
+from app.services.guardrails import check_input, check_output
 from retrieval.context_formatting import build_cited_context
 from embeddings.text_embeddings import get_text_embedding_model
 from retrieval.hybrid_retrieval import (
@@ -337,8 +338,9 @@ def _sources_from_documents(docs) -> list[dict]:
 
 def ask_question(query: str) -> dict:
     """Answer one question with the full RAG pipeline (no chat history)."""
-    result = answer_query(query, [])
+    safe_query = check_input(query)
+    result = answer_query(safe_query, [])
     return {
-        "answer": result.text,
+        "answer": check_output(result.text),
         "sources": _sources_from_documents(result.context_documents),
     }
