@@ -2,6 +2,7 @@ import csv
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import pymupdf
 from docx import Document as WordDocument
@@ -9,6 +10,14 @@ from openpyxl import Workbook
 from pptx import Presentation
 
 from ingestion.document_loader import DocumentLoadError, load_document_file, stable_document_id
+
+
+def _tesseract_available():
+    try:
+        pymupdf.get_tessdata()
+    except RuntimeError:
+        return False
+    return True
 
 
 class DocumentLoaderTests(unittest.TestCase):
@@ -92,6 +101,37 @@ class DocumentLoaderTests(unittest.TestCase):
         pdf.close()
         with self.assertRaisesRegex(DocumentLoadError, "no extractable text"):
             load_document_file(scanned)
+
+    def _image_only_pdf(self, text):
+        source = pymupdf.open()
+        source.new_page(width=400, height=120).insert_text((20, 70), text, fontsize=28)
+        pixmap = source[0].get_pixmap(dpi=200)
+        source.close()
+
+        path = self.root / "photo.pdf"
+        pdf = pymupdf.open()
+        page = pdf.new_page(width=400, height=120)
+        page.insert_image(page.rect, stream=pixmap.tobytes("png"))
+        page.insert_text((5, 115), "CamScanner", fontsize=6)
+        text_page = pdf.new_page()
+        text_page.insert_text((72, 72), "Digital fact")
+        pdf.save(path)
+        pdf.close()
+        return path
+
+    @unittest.skipUnless(_tesseract_available(), "Tesseract is not installed")
+    def test_image_only_pdf_page_is_ocred(self):
+        documents, _ = load_document_file(self._image_only_pdf("Total 42.18"))
+        self.assertIn("42.18", documents[0].page_content)
+        self.assertEqual(documents[0].metadata["extraction"], "ocr")
+        self.assertEqual(documents[1].metadata["extraction"], "text")
+
+    def test_missing_tesseract_skips_image_pages_with_warning(self):
+        path = self._image_only_pdf("Total 42.18")
+        with mock.patch.object(pymupdf.Page, "get_textpage_ocr", side_effect=RuntimeError("no tessdata")):
+            documents, warnings = load_document_file(path)
+        self.assertEqual([doc.page_content for doc in documents], ["Digital fact"])
+        self.assertIn("OCR unavailable", warnings[0])
 
 
 if __name__ == "__main__":
