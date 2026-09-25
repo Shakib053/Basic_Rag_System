@@ -143,7 +143,8 @@ python scripts/qdrant_smoke.py
 
 - `/upload` replaces chunks when the same canonical local path changes and is a no-op when its content hash is unchanged.
 - The default upload limit is 50 MiB and can be changed with `MAX_UPLOAD_BYTES`.
-- Scanned/image-only files, OCR, audio/video, archives, and chart understanding are not supported.
+- Image-only PDF pages (scans, phone photos) are OCR'd with Tesseract (`brew install tesseract`; set `OCR_LANGUAGE`, default `eng`). Without Tesseract those pages are skipped with a warning. Handwriting accuracy is limited.
+- Standalone image uploads, audio/video, archives, and chart understanding are not supported.
 - The existing image extraction pipeline remains optional, but image paths are never treated as textual answer evidence.
 - The included relevance calibration is an initial 20-query local-corpus baseline; expand it with held-out genre-specific examples before treating its quality metrics as an SLA.
 - Generated image data is stored in `data/extracted_images/` and `image_chroma_db/`.

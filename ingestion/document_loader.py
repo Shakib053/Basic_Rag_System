@@ -14,6 +14,8 @@ from langchain_core.documents import Document
 SUPPORTED_FILE_TYPES = {".txt", ".md", ".pdf", ".docx", ".pptx", ".html", ".htm", ".csv", ".xlsx"}
 DEFAULT_MAX_UPLOAD_BYTES = 50 * 1024 * 1024
 TABULAR_ROWS_PER_DOCUMENT = 100
+# Pages with images and less text than this are OCR'd (covers scanner-app watermarks like "CamScanner").
+OCR_MIN_TEXT_CHARS = 50
 
 
 class DocumentLoadError(ValueError):
@@ -89,14 +91,30 @@ def _pdf_documents(path: Path, metadata: dict) -> tuple[list[Document], list[str
             raise DocumentLoadError("Encrypted PDFs are not supported.")
         documents = []
         blank_pages = 0
+        ocr_available = True
+        ocr_skipped_pages = 0
         for page_index, page in enumerate(pdf):
             text = page.get_text("text").strip()
+            extraction = "text"
+            if len(text) < OCR_MIN_TEXT_CHARS and page.get_images():
+                if ocr_available:
+                    try:
+                        textpage = page.get_textpage_ocr(dpi=300, full=True, language=os.getenv("OCR_LANGUAGE", "eng"))
+                        text = page.get_text("text", textpage=textpage).strip()
+                        extraction = "ocr"
+                    except RuntimeError:
+                        ocr_available = False
+                if not ocr_available:
+                    ocr_skipped_pages += 1
+                    continue
             if not text:
                 blank_pages += 1
                 continue
             page_metadata = dict(metadata)
-            page_metadata.update({"page": page_index, "source_locator": f"page {page_index + 1}"})
+            page_metadata.update({"page": page_index, "source_locator": f"page {page_index + 1}", "extraction": extraction})
             documents.append(Document(page_content=text, metadata=page_metadata))
+        if ocr_skipped_pages:
+            warnings.append(f"OCR unavailable (Tesseract not installed); skipped {ocr_skipped_pages} image-only page(s).")
         if blank_pages:
             warnings.append(f"Skipped {blank_pages} page(s) with no extractable text.")
         return documents, warnings
@@ -250,7 +268,7 @@ def load_document_file(path: str | Path) -> tuple[list[Document], list[str]]:
         documents = _xlsx_documents(file_path, metadata)
 
     if not documents:
-        raise DocumentLoadError("The file contains no extractable text. OCR and vision are not enabled.")
+        raise DocumentLoadError(" ".join(["The file contains no extractable text.", *warnings]))
     return documents, warnings
 
 
