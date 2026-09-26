@@ -117,6 +117,21 @@ Inside chat, documents can be managed incrementally without rebuilding the colle
 /delete <document_id>
 ```
 
+Start the API (interactive docs at http://localhost:8000/docs):
+
+```bash
+uvicorn app.main:app --reload
+```
+
+Upload a document and list indexed documents over HTTP:
+
+```bash
+curl -F "file=@/absolute/path/to/report.pdf" http://localhost:8000/upload
+curl http://localhost:8000/documents
+```
+
+Uploaded files are saved to `data/uploads/`; uploading a file with the same name replaces the previous version.
+
 Run evaluation:
 
 ```bash
