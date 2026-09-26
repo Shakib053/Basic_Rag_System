@@ -61,6 +61,8 @@ if LLM_PROVIDER == "ollama":
         temperature=0.0,
         num_predict=128,
         disable_streaming=True,
+        # qwen3 "thinks" by default; hidden thinking tokens count against num_predict and truncate answers.
+        reasoning=False,
         sync_client_kwargs={"timeout": LLM_TIMEOUT_SECONDS},
     )
     answer_llm = ChatOllama(
@@ -69,6 +71,8 @@ if LLM_PROVIDER == "ollama":
         temperature=0.7,
         num_predict=512,
         disable_streaming=True,
+        # qwen3 "thinks" by default; hidden thinking tokens count against num_predict and truncate answers.
+        reasoning=False,
         sync_client_kwargs={"timeout": LLM_TIMEOUT_SECONDS},
     )
 else:
@@ -342,5 +346,10 @@ def ask_question(query: str) -> dict:
     result = answer_query(safe_query, [])
     return {
         "answer": check_output(result.text),
+        "mode": result.mode.value,
+        "citations": [
+            {"id": citation.citation_id, "document": citation.file_name, "locator": citation.locator}
+            for citation in result.citations
+        ],
         "sources": _sources_from_documents(result.context_documents),
     }

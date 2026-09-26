@@ -36,8 +36,16 @@ class Source(BaseModel):
     score: float | None = None  # raw cross-encoder rerank score, higher is more relevant
 
 
+class Citation(BaseModel):
+    id: str  # matches the [S1] markers in the answer text
+    document: str
+    locator: str  # e.g. "page 4", "slide 2", "Sheet1 rows 2-101"
+
+
 class ChatResponse(BaseModel):
     answer: str
+    mode: str  # "grounded", "general", or "error"
+    citations: list[Citation] = []
     sources: list[Source] = []
 
 
