@@ -8,7 +8,7 @@ from langchain_core.documents import Document
 
 from app import main
 from app.services import rag_service
-from retrieval.result import AnswerMode, AnswerResult
+from retrieval.result import AnswerMode, AnswerResult, SourceCitation
 
 
 def _run_in_worker_thread(func):
@@ -34,12 +34,17 @@ class RagServiceTests(unittest.TestCase):
             Document(page_content="b", metadata={"file_name": "cv.pdf", "page": 1, "rerank_score": 3.0}),
             Document(page_content="c", metadata={"file_name": "notes.md", "rerank_score": -1.5}),
         ]
-        result = AnswerResult(text="The answer [S1].", mode=AnswerMode.GROUNDED, context_documents=docs)
+        citations = [SourceCitation(citation_id="S1", document_id="doc-1", file_name="cv.pdf", locator="page 2")]
+        result = AnswerResult(
+            text="The answer [S1].", mode=AnswerMode.GROUNDED, citations=citations, context_documents=docs
+        )
         with patch.object(rag_service, "answer_query", return_value=result) as answer_query:
             response = rag_service.ask_question("What is it?")
 
         self.assertEqual(response, {
             "answer": "The answer [S1].",
+            "mode": "grounded",
+            "citations": [{"id": "S1", "document": "cv.pdf", "locator": "page 2"}],
             "sources": [
                 {"document": "cv.pdf", "page": 2, "score": 7.1235},
                 {"document": "notes.md", "page": None, "score": -1.5},
@@ -67,9 +72,16 @@ class RagServiceTests(unittest.TestCase):
             response = rag_service.ask_question("Capital of France?")
 
         self.assertEqual(response["sources"], [])
+        self.assertEqual(response["citations"], [])
+        self.assertEqual(response["mode"], "general")
 
     def test_chat_endpoint_returns_chat_response_shape(self):
-        payload = {"answer": "A [S1].", "sources": [{"document": "cv.pdf", "page": 2, "score": 7.1}]}
+        payload = {
+            "answer": "A [S1].",
+            "mode": "grounded",
+            "citations": [{"id": "S1", "document": "cv.pdf", "locator": "page 2"}],
+            "sources": [{"document": "cv.pdf", "page": 2, "score": 7.1}],
+        }
         with patch.object(main, "ask_question", return_value=payload):
             response = TestClient(main.app).post("/chat", json={"query": "q"})
 
@@ -96,11 +108,16 @@ class RagServiceTests(unittest.TestCase):
         self.assertEqual(response.headers["access-control-allow-origin"], "http://localhost:5173")
 
     def test_chat_endpoint_strips_surrounding_spaces(self):
-        payload = {"answer": "A.", "sources": []}
+        payload = {"answer": "A.", "mode": "general", "citations": [], "sources": []}
         with patch.object(main, "ask_question", return_value=payload) as ask_question:
             TestClient(main.app).post("/chat", json={"query": "  what is RAG?  "})
 
         ask_question.assert_called_once_with("what is RAG?")
+
+    @unittest.skipUnless(rag_service.LLM_PROVIDER == "ollama", "Ollama-specific setting")
+    def test_ollama_models_disable_thinking(self):
+        self.assertIs(rag_service.retrieval_llm.reasoning, False)
+        self.assertIs(rag_service.answer_llm.reasoning, False)
 
     def test_run_with_timeout_works_off_main_thread(self):
         outcome = _run_in_worker_thread(
