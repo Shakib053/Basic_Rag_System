@@ -49,6 +49,25 @@ h1 {
   color: var(--error);
 }
 
+.upload-message {
+  color: var(--muted);
+}
+
+.documents {
+  margin: 16px 0 24px;
+}
+
+.documents h2 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  color: var(--muted);
+}
+
+.documents .empty {
+  margin: 0;
+  color: var(--muted);
+}
+
 .answer {
   margin-top: 24px;
   padding: 16px 20px;

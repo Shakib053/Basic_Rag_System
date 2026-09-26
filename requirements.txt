@@ -31,3 +31,4 @@ ragas==0.4.3
 sentence-transformers==6.0.1
 fastapi
 uvicorn
+python-multipart
