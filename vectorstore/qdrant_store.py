@@ -257,6 +257,25 @@ def delete_document(document_id: str) -> bool:
     return result.status == models.UpdateStatus.COMPLETED
 
 
+def get_document_source(document_id: str) -> str | None:
+    """Return the file path the document was ingested from, if it is indexed."""
+    client = get_qdrant_client()
+    collection_name = get_qdrant_collection_name()
+    if not client.collection_exists(collection_name):
+        return None
+    ensure_document_id_index(client)
+    points, _ = client.scroll(
+        collection_name=collection_name,
+        scroll_filter=_document_filter(document_id),
+        limit=1,
+        with_payload=True,
+        with_vectors=False,
+    )
+    if not points:
+        return None
+    return (points[0].payload or {}).get("metadata", {}).get("source")
+
+
 def find_document_by_content_hash(content_hash: str) -> DocumentRecord | None:
     """Return the indexed document with exactly this content, if any."""
     client = get_qdrant_client()

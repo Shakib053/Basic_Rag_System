@@ -350,7 +350,13 @@ def ask_question(query: str) -> dict:
         "answer": check_output(result.text),
         "mode": result.mode.value,
         "citations": [
-            {"id": citation.citation_id, "document": citation.file_name, "locator": citation.locator}
+            {
+                "id": citation.citation_id,
+                "document_id": citation.document_id,
+                "document": citation.file_name,
+                "locator": citation.locator,
+                "page": citation.page,
+            }
             for citation in result.citations
         ],
         "sources": _sources_from_documents(result.context_documents),

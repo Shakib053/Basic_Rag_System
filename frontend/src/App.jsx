@@ -1,23 +1,27 @@
 import { useEffect, useState } from 'react'
 import './App.css'
-
-// Where the FastAPI backend runs (uvicorn app.main:app --reload).
-const API_URL = 'http://localhost:8000'
+import { API_URL, BACKEND_DOWN } from './api.js'
+import Sidebar from './components/Sidebar.jsx'
+import AskBox from './components/AskBox.jsx'
+import { Hero, HowItWorks } from './components/EmptyState.jsx'
+import AnswerView from './components/AnswerView.jsx'
+import DocumentViewer from './components/DocumentViewer.jsx'
 
 function App() {
   // State: values that, when changed, make React redraw the screen.
   const [question, setQuestion] = useState('')
-  const [answer, setAnswer] = useState('')
-  const [sources, setSources] = useState([])
+  const [result, setResult] = useState(null) // { question, answer, mode, citations }
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   // State for uploading files and listing the ones already indexed.
   const [documents, setDocuments] = useState(null) // null = still loading
-  const [selectedFile, setSelectedFile] = useState(null)
   const [uploading, setUploading] = useState(false)
   const [uploadMessage, setUploadMessage] = useState('')
   const [uploadError, setUploadError] = useState('')
+
+  // The document open in the viewer: { document_id, file_name, file_type, page }, or null.
+  const [viewing, setViewing] = useState(null)
 
   async function loadDocuments() {
     try {
@@ -29,7 +33,7 @@ function App() {
       const data = await response.json()
       setDocuments(data)
     } catch {
-      setUploadError('Could not reach the backend. Is uvicorn running on port 8000?')
+      setUploadError(BACKEND_DOWN)
     }
   }
 
@@ -38,14 +42,7 @@ function App() {
     loadDocuments()
   }, [])
 
-  async function handleUpload(event) {
-    event.preventDefault() // stop the browser from reloading the page on submit
-
-    if (selectedFile === null) {
-      setUploadError('Please choose a file.')
-      return
-    }
-
+  async function handleUpload(file) {
     setUploading(true)
     setUploadMessage('')
     setUploadError('')
@@ -53,7 +50,7 @@ function App() {
     // Files are sent as "form data", not JSON. The field name must be "file".
     // Don't set a Content-Type header: the browser fills it in for form data.
     const formData = new FormData()
-    formData.append('file', selectedFile)
+    formData.append('file', file)
 
     try {
       const response = await fetch(`${API_URL}/upload`, {
@@ -80,15 +77,38 @@ function App() {
       }
       loadDocuments() // refresh the list so the new file shows up
     } catch {
-      setUploadError('Could not reach the backend. Is uvicorn running on port 8000?')
+      setUploadError(BACKEND_DOWN)
     } finally {
       setUploading(false)
     }
   }
 
-  async function handleSubmit(event) {
-    event.preventDefault() // stop the browser from reloading the page on submit
+  async function handleDelete(doc) {
+    if (!window.confirm(`Delete "${doc.file_name}"? It will no longer be searched.`)) {
+      return
+    }
 
+    setUploadMessage('')
+    setUploadError('')
+    try {
+      const response = await fetch(`${API_URL}/documents/${encodeURIComponent(doc.document_id)}`, {
+        method: 'DELETE',
+      })
+      if (!response.ok && response.status !== 404) {
+        setUploadError(`Could not delete ${doc.file_name} (${response.status}).`)
+        return
+      }
+      setUploadMessage(`${doc.file_name} deleted.`)
+      if (viewing?.document_id === doc.document_id) {
+        setViewing(null)
+      }
+      loadDocuments()
+    } catch {
+      setUploadError(BACKEND_DOWN)
+    }
+  }
+
+  async function handleAsk() {
     if (question.trim() === '') {
       setError('Please type a question.')
       return
@@ -96,8 +116,8 @@ function App() {
 
     setLoading(true)
     setError('')
-    setAnswer('')
-    setSources([])
+    setResult(null)
+    setViewing(null)
 
     try {
       const response = await fetch(`${API_URL}/chat`, {
@@ -116,97 +136,71 @@ function App() {
       }
 
       const data = await response.json()
-      setAnswer(data.answer)
-      setSources(data.sources)
+      setResult({ question, answer: data.answer, mode: data.mode, citations: data.citations })
     } catch {
       // fetch itself failed: backend not running, or blocked by CORS
-      setError('Could not reach the backend. Is uvicorn running on port 8000?')
+      setError(BACKEND_DOWN)
     } finally {
       setLoading(false)
     }
   }
 
+  // Open a document from the sidebar (page = null) or from a citation (page = cited page).
+  function openDocument(documentId, fileName, page) {
+    const doc = documents?.find((d) => d.document_id === documentId)
+    const fileType = doc?.file_type ?? fileName.split('.').pop().toLowerCase()
+    setViewing({ document_id: documentId, file_name: fileName, file_type: fileType, page })
+  }
+
+  // Documents the current answer was taken from, highlighted in the sidebar.
+  const citedIds = new Set(result?.citations.map((citation) => citation.document_id) ?? [])
+
   return (
-    <main className="container">
-      <h1>Personal RAG</h1>
-      <p className="subtitle">Ask a question about your documents.</p>
+    <div className="layout">
+      <Sidebar
+        documents={documents}
+        citedIds={citedIds}
+        activeId={viewing?.document_id}
+        uploading={uploading}
+        uploadMessage={uploadMessage}
+        uploadError={uploadError}
+        onUpload={handleUpload}
+        onOpen={(doc) => openDocument(doc.document_id, doc.file_name, null)}
+        onDelete={handleDelete}
+      />
 
-      <form onSubmit={handleUpload} className="ask-form">
-        <input
-          type="file"
-          accept=".txt,.md,.pdf,.docx,.pptx,.html,.htm,.csv,.xlsx"
-          onChange={(event) => setSelectedFile(event.target.files[0] ?? null)}
-          disabled={uploading}
-        />
-        <button type="submit" disabled={uploading}>
-          {uploading ? 'Uploading…' : 'Upload'}
-        </button>
-      </form>
-
-      {uploadError && <p className="error">{uploadError}</p>}
-      {uploadMessage && <p className="upload-message">{uploadMessage}</p>}
-
-      <section className="documents">
-        <h2>Your documents</h2>
-        {documents === null ? (
-          <p className="empty">Loading…</p>
-        ) : documents.length === 0 ? (
-          <p className="empty">No documents uploaded yet.</p>
+      <main className="main-panel">
+        {viewing ? (
+          <DocumentViewer
+            key={`${viewing.document_id}-${viewing.page}`}
+            doc={viewing}
+            backLabel={result ? 'Back to answer' : 'Back'}
+            onBack={() => setViewing(null)}
+          />
         ) : (
-          <ul className="sources">
-            {documents.map((doc) => (
-              <li key={doc.document_id}>
-                <span className="source-name">{doc.file_name}</span>
-                <span className="source-score">
-                  {' '}· {doc.file_type} · {doc.chunk_count} chunks
-                  {/* The date tells apart two files with the same name. */}
-                  {doc.ingested_at && ` · ${new Date(doc.ingested_at).toLocaleDateString()}`}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <>
+            {!result && !loading && <Hero />}
+            <AskBox
+              question={question}
+              onChange={setQuestion}
+              onSubmit={handleAsk}
+              loading={loading}
+            />
+            {error && <p className="error">{error}</p>}
+            {loading && <p className="thinking">Searching your documents…</p>}
+            {result && (
+              <AnswerView
+                result={result}
+                onOpenCitation={(citation) =>
+                  openDocument(citation.document_id, citation.document, citation.page)
+                }
+              />
+            )}
+            {!result && !loading && <HowItWorks />}
+          </>
         )}
-      </section>
-
-      <form onSubmit={handleSubmit} className="ask-form">
-        <input
-          type="text"
-          value={question}
-          onChange={(event) => setQuestion(event.target.value)}
-          placeholder="e.g. What is the Salah app?"
-          disabled={loading}
-        />
-        <button type="submit" disabled={loading}>
-          {loading ? 'Thinking…' : 'Ask'}
-        </button>
-      </form>
-
-      {error && <p className="error">{error}</p>}
-
-      {answer && (
-        <section className="answer">
-          <h2>Answer</h2>
-          <p className="answer-text">{answer}</p>
-
-          {sources.length > 0 && (
-            <>
-              <h2>Sources</h2>
-              <ul className="sources">
-                {sources.map((source, index) => (
-                  <li key={index}>
-                    <span className="source-name">{source.document}</span>
-                    {source.page !== null && <span> · page {source.page}</span>}
-                    {source.score !== null && (
-                      <span className="source-score"> · score {source.score.toFixed(2)}</span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </section>
-      )}
-    </main>
+      </main>
+    </div>
   )
 }
 

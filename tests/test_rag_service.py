@@ -34,7 +34,9 @@ class RagServiceTests(unittest.TestCase):
             Document(page_content="b", metadata={"file_name": "cv.pdf", "page": 1, "rerank_score": 3.0}),
             Document(page_content="c", metadata={"file_name": "notes.md", "rerank_score": -1.5}),
         ]
-        citations = [SourceCitation(citation_id="S1", document_id="doc-1", file_name="cv.pdf", locator="page 2")]
+        citations = [
+            SourceCitation(citation_id="S1", document_id="doc-1", file_name="cv.pdf", locator="page 2", page=2)
+        ]
         result = AnswerResult(
             text="The answer [S1].", mode=AnswerMode.GROUNDED, citations=citations, context_documents=docs
         )
@@ -44,7 +46,9 @@ class RagServiceTests(unittest.TestCase):
         self.assertEqual(response, {
             "answer": "The answer [S1].",
             "mode": "grounded",
-            "citations": [{"id": "S1", "document": "cv.pdf", "locator": "page 2"}],
+            "citations": [
+                {"id": "S1", "document_id": "doc-1", "document": "cv.pdf", "locator": "page 2", "page": 2}
+            ],
             "sources": [
                 {"document": "cv.pdf", "page": 2, "score": 7.1235},
                 {"document": "notes.md", "page": None, "score": -1.5},
@@ -93,7 +97,9 @@ class RagServiceTests(unittest.TestCase):
         payload = {
             "answer": "A [S1].",
             "mode": "grounded",
-            "citations": [{"id": "S1", "document": "cv.pdf", "locator": "page 2"}],
+            "citations": [
+                {"id": "S1", "document_id": "doc-1", "document": "cv.pdf", "locator": "page 2", "page": 2}
+            ],
             "sources": [{"document": "cv.pdf", "page": 2, "score": 7.1}],
         }
         with patch.object(main, "ask_question", return_value=payload):
