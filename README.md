@@ -1,8 +1,12 @@
 # Local Document RAG Assistant
 
-A terminal-based Retrieval-Augmented Generation (RAG) assistant for querying local, text-extractable documents. It incrementally builds a dense+sparse hybrid index in Qdrant and answers from cited document evidence, with an explicit general-knowledge fallback when the corpus has no relevant evidence.
+A Retrieval-Augmented Generation (RAG) assistant for querying local, text-extractable documents. It incrementally builds a dense+sparse hybrid index in Qdrant and answers from cited document evidence, with an explicit general-knowledge fallback when the corpus has no relevant evidence.
+
+It can be used three ways: a **web UI** (React), a **REST API** (FastAPI), or a **terminal chat**.
 
 ## Features
+
+### Retrieval and answering
 
 - Ingests `.txt`, `.md`, `.pdf`, `.docx`, `.pptx`, `.html`, `.csv`, and `.xlsx`
 - Supports semantic chunking by default, with recursive chunking as an option
@@ -14,12 +18,46 @@ A terminal-based Retrieval-Augmented Generation (RAG) assistant for querying loc
 - Emits inline file/page/slide/sheet citations and rejects invented citation IDs
 - Treats document text as untrusted data rather than model instructions
 - Supports incremental upload, replacement, listing, deletion, and document-scoped search
+- OCRs image-only PDF pages (scans, phone photos) with Tesseract
 - Includes RAGAS evaluation support with `eval_dataset.json`
+
+### Web UI and API
+- Upload documents from the browser and see them indexed immediately
+- "Your documents" list showing every indexed document with its type, chunk count, and upload date
+- Ask questions and get an answer with its sources (document, page, and relevance score)
+- Each upload gets its own ID, so files with the same name are kept as separate documents
+- Duplicate content is detected by file hash: uploading identical bytes (under any name) returns the existing document instead of indexing it again
+
+## Web UI
+
+The React app in `frontend/` talks to the FastAPI backend at `http://localhost:8000`. The page has three parts:
+
+1. **Upload**: choose a file (`.txt`, `.md`, `.pdf`, `.docx`, `.pptx`, `.html`, `.csv`, `.xlsx`) and click **Upload**. It shows `report.pdf indexed (12 chunks)` on success, `Already uploaded as report.pdf, nothing new was added.` for identical content, or the reason a file was rejected (wrong type, empty, too large).
+2. **Your documents**: every document in the index, loaded when the page opens and refreshed after each upload. Same-name documents can be told apart by their upload date.
+3. **Ask**: type a question to get the answer and its sources.
+
+## API
+
+| Method | Endpoint | What it does |
+|---|---|---|
+| `GET` | `/health` | Returns `{"status": "ok"}` |
+| `POST` | `/chat` | Body `{"query": "..."}`. Returns `answer`, `mode` (`grounded`, `general`, or `error`), `citations`, and `sources` |
+| `POST` | `/upload` | Multipart form with a `file` field. Saves and indexes the file; returns `document_id`, `file_name`, `status` (`indexed` or `duplicate`), `chunk_count`, and `warnings`. Invalid files return `400` with the reason |
+| `GET` | `/documents` | Lists every indexed document: `document_id`, `file_name`, `file_type`, `chunk_count`, `ingested_at` |
+
+Interactive API docs are available at http://localhost:8000/docs while the server runs.
 
 ## Project Structure
 
 ```text
 .
+├── app/
+│   ├── main.py              # FastAPI app: /health, /chat, /upload, /documents
+│   └── services/
+│       ├── guardrails.py
+│       ├── rag_service.py   # RAG answering pipeline
+│       └── upload_service.py
+├── frontend/                # React + Vite web UI
 ├── chat.py                  # terminal chat entry point (kept at root)
 ├── chunking/
 │   └── recursive_chunking.py
@@ -46,10 +84,11 @@ A terminal-based Retrieval-Augmented Generation (RAG) assistant for querying loc
 │   ├── ollama_smoke.py
 │   ├── openrouter_smoke.py
 │   └── qdrant_smoke.py
+├── tests/
 ├── vectorstore/
 │   ├── chroma_store.py
 │   └── qdrant_store.py
-└── data/                    # source documents
+└── data/                    # source documents; web uploads go to data/uploads/<id>/
 ```
 
 ## Setup
@@ -85,6 +124,12 @@ source venv/bin/activate
 python -m pip install -r requirements.txt
 ```
 
+Install the web UI dependencies (requires Node.js):
+
+```bash
+npm --prefix frontend install
+```
+
 ## Usage
 
 The v2 collection has a different dense+sparse schema. Add documents to `data/`, then perform a one-time rebuild when migrating from the old `rag_text` collection:
@@ -117,13 +162,19 @@ Inside chat, documents can be managed incrementally without rebuilding the colle
 /delete <document_id>
 ```
 
-Start the API (interactive docs at http://localhost:8000/docs):
+Start the web app. Run the API in one terminal:
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
-Upload a document and list indexed documents over HTTP:
+Then run the UI in a second terminal and open http://localhost:5173:
+
+```bash
+npm --prefix frontend run dev
+```
+
+Upload a document and list indexed documents over HTTP without the UI:
 
 ```bash
 curl -F "file=@/absolute/path/to/report.pdf" http://localhost:8000/upload
@@ -156,10 +207,23 @@ python scripts/qdrant_smoke.py
 
 ## Notes
 
-- `/upload` replaces chunks when the same canonical local path changes and is a no-op when its content hash is unchanged.
+- The terminal `/upload` command identifies a document by its local path: it replaces chunks when that file changes and is a no-op when its content hash is unchanged. The web/API upload instead gives every upload its own ID, so uploading an edited file with the same name adds a new document and keeps the old one.
 - The default upload limit is 50 MiB and can be changed with `MAX_UPLOAD_BYTES`.
 - Image-only PDF pages (scans, phone photos) are OCR'd with Tesseract (`brew install tesseract`; set `OCR_LANGUAGE`, default `eng`). Without Tesseract those pages are skipped with a warning. Handwriting accuracy is limited.
 - Standalone image uploads, audio/video, archives, and chart understanding are not supported.
 - The existing image extraction pipeline remains optional, but image paths are never treated as textual answer evidence.
 - The included relevance calibration is an initial 20-query local-corpus baseline; expand it with held-out genre-specific examples before treating its quality metrics as an SLA.
 - Generated image data is stored in `data/extracted_images/` and `image_chroma_db/`.
+
+## Roadmap
+
+Planned next steps:
+
+- **Delete documents from the UI**: a delete button per document and a `DELETE /documents/{id}` endpoint (the terminal chat can already delete). This matters most for removing old versions of same-name files.
+- **Replace a document**: an option to replace an existing document when uploading a new version, instead of always keeping both.
+- **Choose which documents to search**: pick documents in the UI to limit a question to them, like the terminal `/use` command.
+- **Follow-up questions**: send chat history through the API so the UI can hold a conversation, not just answer one question at a time.
+- **Richer answers in the UI**: show the answer mode (grounded or general) and the inline `[S1]` citations next to the answer.
+- **Guardrails**: `check_input` and `check_output` in `app/services/guardrails.py` currently pass text through unchanged; real input and output checks will be added there.
+- **Faster, friendlier uploads**: upload progress, background indexing for large files, and a faster document list for large collections.
+- **Cleaner citations**: show a file name instead of the full server path for text-file citations.
