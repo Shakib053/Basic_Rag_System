@@ -328,9 +328,11 @@ def _sources_from_documents(docs) -> list[dict]:
         file_name = doc.metadata.get("file_name", "unknown file")
         page = doc.metadata.get("page")
         page = page + 1 if isinstance(page, int) else None  # stored 0-based
-        if (file_name, page) in seen:
+        # Group by document id, not name: two uploads can share a file name.
+        key = (doc.metadata.get("document_id", file_name), page)
+        if key in seen:
             continue
-        seen.add((file_name, page))
+        seen.add(key)
         score = doc.metadata.get("rerank_score")
         sources.append({
             "document": file_name,

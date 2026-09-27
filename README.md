@@ -130,7 +130,7 @@ curl -F "file=@/absolute/path/to/report.pdf" http://localhost:8000/upload
 curl http://localhost:8000/documents
 ```
 
-Uploaded files are saved to `data/uploads/`; uploading a file with the same name replaces the previous version.
+Uploaded files are saved to `data/uploads/<id>/`. Files with the same name are kept as separate documents, and uploading identical content returns the existing document as `duplicate`.
 
 Run evaluation:
 

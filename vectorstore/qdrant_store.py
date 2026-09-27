@@ -45,9 +45,7 @@ def text_collection_exists() -> bool:
     return get_qdrant_client().collection_exists(get_qdrant_collection_name())
 
 
-def ensure_document_id_index(client=None) -> None:
-    """Ensure filtered document operations work on existing collections too."""
-    client = client or get_qdrant_client()
+def _ensure_keyword_index(client, field_name: str) -> None:
     collection_name = get_qdrant_collection_name()
     if not client.collection_exists(collection_name):
         return
@@ -55,17 +53,27 @@ def ensure_document_id_index(client=None) -> None:
     payload_schema = getattr(collection, "payload_schema", {}) or {}
     if not isinstance(payload_schema, dict):
         payload_schema = {}
-    if "metadata.document_id" in payload_schema:
+    if field_name in payload_schema:
         return
 
     from qdrant_client import models
 
     client.create_payload_index(
         collection_name=collection_name,
-        field_name="metadata.document_id",
+        field_name=field_name,
         field_schema=models.PayloadSchemaType.KEYWORD,
         wait=True,
     )
+
+
+def ensure_document_id_index(client=None) -> None:
+    """Ensure filtered document operations work on existing collections too."""
+    _ensure_keyword_index(client or get_qdrant_client(), "metadata.document_id")
+
+
+def ensure_content_hash_index(client=None) -> None:
+    """Ensure duplicate lookups by content hash work (Qdrant Cloud requires an index to filter)."""
+    _ensure_keyword_index(client or get_qdrant_client(), "metadata.content_hash")
 
 
 def get_sparse_embedding_model():
@@ -247,6 +255,51 @@ def delete_document(document_id: str) -> bool:
         wait=True,
     )
     return result.status == models.UpdateStatus.COMPLETED
+
+
+def find_document_by_content_hash(content_hash: str) -> DocumentRecord | None:
+    """Return the indexed document with exactly this content, if any."""
+    client = get_qdrant_client()
+    collection_name = get_qdrant_collection_name()
+    if not client.collection_exists(collection_name):
+        return None
+    ensure_content_hash_index(client)
+
+    from qdrant_client import models
+
+    hash_filter = models.Filter(
+        must=[
+            models.FieldCondition(
+                key="metadata.content_hash",
+                match=models.MatchValue(value=content_hash),
+            )
+        ]
+    )
+    points, _ = client.scroll(
+        collection_name=collection_name,
+        scroll_filter=hash_filter,
+        limit=1,
+        with_payload=True,
+        with_vectors=False,
+    )
+    if not points:
+        return None
+
+    metadata = (points[0].payload or {}).get("metadata", {})
+    document_id = str(metadata["document_id"])
+    chunk_count = client.count(
+        collection_name=collection_name,
+        count_filter=_document_filter(document_id),
+        exact=True,
+    ).count
+    return DocumentRecord(
+        document_id=document_id,
+        file_name=str(metadata.get("file_name", "unknown")),
+        file_type=str(metadata.get("file_type", "unknown")),
+        content_hash=content_hash,
+        ingested_at=str(metadata.get("ingested_at", "")),
+        chunk_count=chunk_count,
+    )
 
 
 def list_document_records() -> list[DocumentRecord]:
