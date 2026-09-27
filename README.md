@@ -23,27 +23,35 @@ It can be used three ways: a **web UI** (React), a **REST API** (FastAPI), or a 
 
 ### Web UI and API
 - Upload documents from the browser and see them indexed immediately
-- "Your documents" list showing every indexed document with its type, chunk count, and upload date
-- Ask questions and get an answer with its sources (document, page, and relevance score)
+- A sidebar listing every indexed document, with search and a menu to open or delete it
+- Ask questions and get an answer with clickable `[S1]` citations and a sources list
+- Click a citation to open the cited file in the built-in viewer at the cited page; the files an answer used are marked "Cited" in the sidebar
 - Each upload gets its own ID, so files with the same name are kept as separate documents
 - Duplicate content is detected by file hash: uploading identical bytes (under any name) returns the existing document instead of indexing it again
 
 ## Web UI
 
-The React app in `frontend/` talks to the FastAPI backend at `http://localhost:8000`. The page has three parts:
+The React app in `frontend/` talks to the FastAPI backend at `http://localhost:8000`. The page has a sidebar on the left and the main panel on the right.
 
-1. **Upload**: choose a file (`.txt`, `.md`, `.pdf`, `.docx`, `.pptx`, `.html`, `.csv`, `.xlsx`) and click **Upload**. It shows `report.pdf indexed (12 chunks)` on success, `Already uploaded as report.pdf, nothing new was added.` for identical content, or the reason a file was rejected (wrong type, empty, too large).
-2. **Your documents**: every document in the index, loaded when the page opens and refreshed after each upload. Same-name documents can be told apart by their upload date.
-3. **Ask**: type a question to get the answer and its sources.
+**Sidebar**
+1. **Upload**: click **Choose File** and pick a file (`.txt`, `.md`, `.pdf`, `.docx`, `.pptx`, `.html`, `.csv`, `.xlsx`); it uploads right away. It shows `report.pdf indexed (12 chunks)` on success, `Already uploaded as report.pdf, nothing new was added.` for identical content, or the reason a file was rejected (wrong type, empty, too large).
+2. **Your documents**: every document in the index, with a search box to filter by name. Same-name documents can be told apart by their upload date. Click a document to view it; the **…** menu can also delete it.
+
+**Main panel**
+1. **Ask**: type a question and press Enter (Shift+Enter adds a new line).
+2. **Answer**: a badge says whether the answer came from your documents or from general knowledge. The numbered chips in the text are citations; the **Sources** list below groups them by file and page.
+3. **Viewer**: clicking a citation opens the file at the cited page. PDFs are shown page by page, `.txt`/`.md`/`.csv` as text; other types can be opened in a new tab with **Open file**.
 
 ## API
 
 | Method | Endpoint | What it does |
 |---|---|---|
 | `GET` | `/health` | Returns `{"status": "ok"}` |
-| `POST` | `/chat` | Body `{"query": "..."}`. Returns `answer`, `mode` (`grounded`, `general`, or `error`), `citations`, and `sources` |
+| `POST` | `/chat` | Body `{"query": "..."}`. Returns `answer`, `mode` (`grounded`, `general`, or `error`), `citations` (`id`, `document_id`, `document`, `locator`, `page`), and `sources` |
 | `POST` | `/upload` | Multipart form with a `file` field. Saves and indexes the file; returns `document_id`, `file_name`, `status` (`indexed` or `duplicate`), `chunk_count`, and `warnings`. Invalid files return `400` with the reason |
 | `GET` | `/documents` | Lists every indexed document: `document_id`, `file_name`, `file_type`, `chunk_count`, `ingested_at` |
+| `GET` | `/documents/{id}/file` | Returns the original file for viewing. `404` if the document is unknown or its file is gone |
+| `DELETE` | `/documents/{id}` | Removes the document from the index, and its file if it was uploaded through the web. `204` on success, `404` if not found |
 
 Interactive API docs are available at http://localhost:8000/docs while the server runs.
 
@@ -52,7 +60,7 @@ Interactive API docs are available at http://localhost:8000/docs while the serve
 ```text
 .
 ├── app/
-│   ├── main.py              # FastAPI app: /health, /chat, /upload, /documents
+│   ├── main.py              # FastAPI app: /health, /chat, /upload, /documents, serves the built UI
 │   └── services/
 │       ├── guardrails.py
 │       ├── rag_service.py   # RAG answering pipeline
@@ -183,6 +191,38 @@ curl http://localhost:8000/documents
 
 Uploaded files are saved to `data/uploads/<id>/`. Files with the same name are kept as separate documents, and uploading identical content returns the existing document as `duplicate`.
 
+## Deploy for free (Hugging Face Spaces)
+
+The `Dockerfile` builds one container: the React UI is built and FastAPI serves it together with the API on port 7860. It fits a free CPU Space (16 GB RAM); smaller free hosts (512 MB RAM) can't hold torch and the two models.
+
+1. Create a Qdrant Cloud free cluster (or reuse yours) and an OpenRouter API key. Ollama can't run on a free Space, so the Space uses OpenRouter's free models.
+2. Create a new Space with the **Docker** SDK, and set it to **Private**: the app has no login, so anyone who can open it can read, upload, and delete documents.
+3. Add these as Space secrets: `QDRANT_URL`, `QDRANT_API_KEY`, `QDRANT_TEXT_COLLECTION`, `LLM_PROVIDER=openrouter`, `OPENROUTER_API_KEY`.
+4. Push this repository to the Space. The Space's `README.md` must start with this header:
+
+   ```yaml
+   ---
+   title: Personal RAG
+   sdk: docker
+   app_port: 7860
+   ---
+   ```
+
+To try the container locally:
+
+```bash
+docker build -t personal-rag .
+```
+
+```bash
+docker run -p 7860:7860 --env-file .env personal-rag
+```
+
+Limits of the free tier:
+
+- The Space's disk is wiped on restart. The indexed chunks live in Qdrant, so questions and citations keep working, but the viewer shows "The original file is no longer available" for files uploaded before the restart.
+- The Space sleeps when unused, so the first request after a pause is slow. Free Qdrant clusters can be suspended after long inactivity, and OpenRouter's free models are rate-limited.
+
 Run evaluation:
 
 ```bash
@@ -219,11 +259,10 @@ python scripts/qdrant_smoke.py
 
 Planned next steps:
 
-- **Delete documents from the UI**: a delete button per document and a `DELETE /documents/{id}` endpoint (the terminal chat can already delete). This matters most for removing old versions of same-name files.
 - **Replace a document**: an option to replace an existing document when uploading a new version, instead of always keeping both.
 - **Choose which documents to search**: pick documents in the UI to limit a question to them, like the terminal `/use` command.
 - **Follow-up questions**: send chat history through the API so the UI can hold a conversation, not just answer one question at a time.
-- **Richer answers in the UI**: show the answer mode (grounded or general) and the inline `[S1]` citations next to the answer.
+- **Keep uploaded files across restarts** on free hosting by storing them outside the container (e.g. a Hugging Face Dataset repo or Supabase Storage).
 - **Guardrails**: `check_input` and `check_output` in `app/services/guardrails.py` currently pass text through unchanged; real input and output checks will be added there.
 - **Faster, friendlier uploads**: upload progress, background indexing for large files, and a faster document list for large collections.
 - **Cleaner citations**: show a file name instead of the full server path for text-file citations.

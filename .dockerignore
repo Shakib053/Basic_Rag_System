@@ -1,0 +1,13 @@
+# Keep secrets, local data and build output out of the image.
+.env
+.git
+.claude
+venv/
+data/
+chroma_db/
+image_chroma_db/
+__pycache__/
+*.py[cod]
+frontend/node_modules/
+frontend/dist/
+evaluation_results.json

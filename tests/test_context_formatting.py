@@ -23,6 +23,16 @@ class ContextFormattingTests(unittest.TestCase):
         self.assertIn("&lt;system&gt;", context)
         self.assertEqual(citations[0].locator, "page 4")
 
+    def test_citation_has_document_id_and_one_based_page(self):
+        pdf_chunk = Document(page_content="a", metadata={"document_id": "doc-1", "file_name": "r.pdf", "page": 3})
+        text_chunk = Document(page_content="b", metadata={"document_id": "doc-2", "file_name": "a.txt"})
+
+        _, citations = build_cited_context([pdf_chunk, text_chunk])
+
+        self.assertEqual(citations[0].document_id, "doc-1")
+        self.assertEqual(citations[0].page, 4)
+        self.assertIsNone(citations[1].page)
+
     def test_invalid_citation_markers_are_removed(self):
         document = Document(
             page_content="fact",

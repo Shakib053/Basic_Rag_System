@@ -8,7 +8,7 @@ from pathlib import Path
 from app.services.rag_service import reset_retrieval_components
 from ingestion.document_loader import file_content_hash
 from ingestion.text_pipeline import ingest_file
-from vectorstore.qdrant_store import find_document_by_content_hash
+from vectorstore.qdrant_store import delete_document, find_document_by_content_hash, get_document_source
 
 # Every upload gets its own folder, e.g. data/uploads/3f2a9c.../report.pdf.
 # The document id comes from the file path, so two files with the same name
@@ -72,3 +72,21 @@ def upload_document(file_name: str, file_object) -> dict:
         "chunk_count": result.chunk_count,
         "warnings": result.warnings,
     }
+
+
+def delete_uploaded_document(document_id: str) -> bool:
+    """Remove a document from the index, and its file if it was uploaded. False if not found."""
+    with _upload_lock:
+        source = get_document_source(document_id)
+        if not delete_document(document_id):
+            return False
+
+        # Only delete the folder of a web upload (<UPLOAD_DIR>/<id>/<name>);
+        # documents ingested from data/ keep their file.
+        if source is not None:
+            upload_folder = Path(source).resolve().parent
+            if upload_folder.parent == UPLOAD_DIR.resolve():
+                shutil.rmtree(upload_folder, ignore_errors=True)
+
+    reset_retrieval_components()
+    return True

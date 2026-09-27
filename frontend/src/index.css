@@ -1,29 +1,29 @@
-/* Page-wide colors and font. Dark mode colors apply when the OS uses dark mode. */
+/* Page-wide colors and font: the dark navy look from the design mockup. */
 :root {
-  --bg: #ffffff;
-  --text: #1f2328;
-  --muted: #656d76;
-  --border: #d0d7de;
-  --panel: #f6f8fa;
-  --accent: #0969da;
-  --error: #cf222e;
+  --bg: #0a1120;
+  --panel: #0e1729;
+  --card: #111c31;
+  --card-hover: #16233d;
+  --text: #e6edf7;
+  --muted: #8a97ad;
+  --border: #1f2c45;
+  --accent: #2f7cf6;
+  --accent-hover: #4a8ef8;
+  --accent-soft: rgba(47, 124, 246, 0.15);
+  --success: #3fb950;
+  --warning: #d29922;
+  --error: #f85149;
+  --radius: 12px;
 
-  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  color-scheme: dark;
+  font-family: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
   line-height: 1.5;
   color: var(--text);
   background: var(--bg);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0d1117;
-    --text: #e6edf3;
-    --muted: #8d96a0;
-    --border: #30363d;
-    --panel: #161b22;
-    --accent: #4493f8;
-    --error: #f85149;
-  }
+* {
+  box-sizing: border-box;
 }
 
 body {

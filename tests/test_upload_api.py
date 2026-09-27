@@ -202,5 +202,100 @@ class DocumentsEndpointTests(unittest.TestCase):
         self.assertEqual(response.json(), [])
 
 
+class DocumentFileEndpointTests(unittest.TestCase):
+    def setUp(self):
+        # A throwaway data folder with one file in it.
+        temp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(temp_dir.cleanup)
+        self.data_dir = Path(temp_dir.name) / "data"
+        self.data_dir.mkdir()
+        self.file_path = self.data_dir / "notes.txt"
+        self.file_path.write_bytes(b"hello")
+
+        dir_patch = patch.object(main, "DATA_DIR", self.data_dir)
+        dir_patch.start()
+        self.addCleanup(dir_patch.stop)
+
+        self.client = TestClient(main.app)
+
+    def get_file(self, source):
+        with patch.object(main, "get_document_source", return_value=source):
+            return self.client.get("/documents/doc-1/file")
+
+    def test_returns_file_inline(self):
+        response = self.get_file(str(self.file_path))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, b"hello")
+        self.assertTrue(response.headers["content-disposition"].startswith("inline"))
+
+    def test_unknown_document_returns_404(self):
+        self.assertEqual(self.get_file(None).status_code, 404)
+
+    def test_missing_file_returns_404(self):
+        self.file_path.unlink()
+        self.assertEqual(self.get_file(str(self.file_path)).status_code, 404)
+
+    def test_file_outside_data_folder_returns_404(self):
+        outside = self.data_dir.parent / "secret.txt"
+        outside.write_bytes(b"secret")
+        self.assertEqual(self.get_file(str(outside)).status_code, 404)
+
+
+class DeleteDocumentEndpointTests(unittest.TestCase):
+    def setUp(self):
+        temp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(temp_dir.cleanup)
+        self.upload_dir = Path(temp_dir.name) / "uploads"
+
+        dir_patch = patch.object(upload_service, "UPLOAD_DIR", self.upload_dir)
+        dir_patch.start()
+        self.addCleanup(dir_patch.stop)
+
+        reset_patch = patch.object(upload_service, "reset_retrieval_components")
+        self.reset_retrieval_components = reset_patch.start()
+        self.addCleanup(reset_patch.stop)
+
+        self.client = TestClient(main.app)
+
+    def delete(self, source, deleted=True):
+        with (
+            patch.object(upload_service, "get_document_source", return_value=source),
+            patch.object(upload_service, "delete_document", return_value=deleted) as delete_document,
+        ):
+            response = self.client.delete("/documents/doc-1")
+        delete_document.assert_called_once_with("doc-1")
+        return response
+
+    def test_deletes_document_and_its_upload_folder(self):
+        folder = self.upload_dir / "abc123"
+        folder.mkdir(parents=True)
+        (folder / "notes.txt").write_bytes(b"hello")
+        other = self.upload_dir / "def456"
+        other.mkdir()
+
+        response = self.delete(str(folder / "notes.txt"))
+
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse(folder.exists())
+        self.assertTrue(other.exists())
+        self.reset_retrieval_components.assert_called_once()
+
+    def test_keeps_files_that_were_not_uploaded_through_the_web(self):
+        own_file = self.upload_dir.parent / "report.pdf"
+        own_file.write_bytes(b"pdf")
+
+        response = self.delete(str(own_file))
+
+        self.assertEqual(response.status_code, 204)
+        self.assertTrue(own_file.exists())
+
+    def test_unknown_document_returns_404(self):
+        response = self.delete(None, deleted=False)
+
+        self.assertEqual(response.status_code, 404)
+        self.reset_retrieval_components.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main()

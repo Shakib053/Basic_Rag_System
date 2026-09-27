@@ -1,14 +1,22 @@
 import logging
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, StringConstraints
 
 from app.services.rag_service import ask_question
-from app.services.upload_service import upload_document
+from app.services.upload_service import delete_uploaded_document, upload_document
 from ingestion.document_loader import DocumentLoadError
-from vectorstore.qdrant_store import list_document_records
+from vectorstore.qdrant_store import get_document_source, list_document_records
+
+# Only files inside this folder are ever served back to the browser.
+DATA_DIR = Path("data")
+# Built React app (npm --prefix frontend run build); served at / when present.
+FRONTEND_DIST = Path("frontend/dist")
 
 
 logging.basicConfig(format="%(levelname)s:     %(message)s")
@@ -41,8 +49,10 @@ class Source(BaseModel):
 
 class Citation(BaseModel):
     id: str  # matches the [S1] markers in the answer text
+    document_id: str
     document: str
     locator: str  # e.g. "page 4", "slide 2", "Sheet1 rows 2-101"
+    page: int | None = None  # 1-based; only PDFs have pages
 
 
 class ChatResponse(BaseModel):
@@ -114,3 +124,29 @@ def documents():
             "ingested_at": record.ingested_at,
         })
     return result
+
+
+@app.get("/documents/{document_id}/file")
+def document_file(document_id: str):
+    source = get_document_source(document_id)
+    if source is None:
+        raise HTTPException(status_code=404, detail="Document not found.")
+
+    path = Path(source).resolve()
+    # Never serve anything outside data/, and the file may be gone (e.g. after a server restart).
+    if not path.is_relative_to(DATA_DIR.resolve()) or not path.is_file():
+        raise HTTPException(status_code=404, detail="The original file is no longer available.")
+
+    # "inline" lets the browser show the file instead of downloading it.
+    return FileResponse(path, filename=path.name, content_disposition_type="inline")
+
+
+@app.delete("/documents/{document_id}", status_code=204)
+def remove_document(document_id: str):
+    if not delete_uploaded_document(document_id):
+        raise HTTPException(status_code=404, detail="Document not found.")
+
+
+# Mounted last so the API routes above take priority over the static files.
+if FRONTEND_DIST.is_dir():
+    app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="frontend")

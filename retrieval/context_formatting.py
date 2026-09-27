@@ -55,12 +55,14 @@ def build_cited_context(docs: Sequence[Document]) -> tuple[str, list[SourceCitat
         file_name = str(doc.metadata.get("file_name") or "unknown file")
         document_id = str(doc.metadata.get("document_id") or "")
         locator = _source_locator(doc)
+        page = doc.metadata.get("page")
         citations.append(
             SourceCitation(
                 citation_id=citation_id,
                 document_id=document_id,
                 file_name=file_name,
                 locator=locator,
+                page=page + 1 if isinstance(page, int) else None,  # stored 0-based
             )
         )
         sections.append(

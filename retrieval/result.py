@@ -17,6 +17,7 @@ class SourceCitation:
     document_id: str
     file_name: str
     locator: str
+    page: int | None = None  # 1-based; only PDFs have pages
 
 
 @dataclass(frozen=True)
