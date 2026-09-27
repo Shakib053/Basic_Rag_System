@@ -1,33 +1,22 @@
 """Save an uploaded file to disk and add it to the search index."""
 
 import shutil
-import threading
-import uuid
 from pathlib import Path
 
 from app.services.rag_service import reset_retrieval_components
-from ingestion.document_loader import file_content_hash
 from ingestion.text_pipeline import ingest_file
-from vectorstore.qdrant_store import find_document_by_content_hash
 
-# Every upload gets its own folder, e.g. data/uploads/3f2a9c.../report.pdf.
-# The document id comes from the file path, so two files with the same name
-# become two separate documents instead of one overwriting the other.
+# Uploaded files are kept here. The same file name always lands on the same
+# path, so re-uploading a file replaces its old version in the index.
 UPLOAD_DIR = Path("data/uploads")
-
-# Only one upload is checked and indexed at a time, so two identical files
-# uploaded at the same moment can't both pass the duplicate check.
-_upload_lock = threading.Lock()
 
 
 def save_uploaded_file(file_name: str, file_object) -> Path:
     # Keep only the name part, e.g. "../../x.pdf" becomes "x.pdf".
     safe_name = Path(file_name).name
 
-    # A new random folder for this upload.
-    upload_folder = UPLOAD_DIR / uuid.uuid4().hex
-    upload_folder.mkdir(parents=True)
-    saved_path = upload_folder / safe_name
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    saved_path = UPLOAD_DIR / safe_name
 
     # Copy the uploaded bytes into a real file on disk.
     with open(saved_path, "wb") as output_file:
@@ -40,27 +29,12 @@ def upload_document(file_name: str, file_object) -> dict:
     """Save the file, index it, and return a summary for the API response."""
     saved_path = save_uploaded_file(file_name, file_object)
 
-    with _upload_lock:
-        try:
-            # If exactly the same content is already indexed (under any name),
-            # return that document instead of indexing a second copy.
-            content_hash = file_content_hash(saved_path)
-            existing = find_document_by_content_hash(content_hash)
-            if existing is not None:
-                shutil.rmtree(saved_path.parent)
-                return {
-                    "document_id": existing.document_id,
-                    "file_name": existing.file_name,
-                    "status": "duplicate",
-                    "chunk_count": existing.chunk_count,
-                    "warnings": [],
-                }
-
-            result = ingest_file(saved_path)
-        except Exception:
-            # Something failed. Remove only this upload's folder; older uploads are untouched.
-            shutil.rmtree(saved_path.parent, ignore_errors=True)
-            raise
+    try:
+        result = ingest_file(saved_path)
+    except Exception:
+        # Indexing failed, so don't keep the broken file around.
+        saved_path.unlink(missing_ok=True)
+        raise
 
     # The chat retriever caches the index; clear it so new chunks are searchable.
     reset_retrieval_components()
@@ -68,7 +42,7 @@ def upload_document(file_name: str, file_object) -> dict:
     return {
         "document_id": result.document_id,
         "file_name": result.file_name,
-        "status": result.status.value,  # "indexed"
+        "status": result.status.value,  # "indexed" or "unchanged"
         "chunk_count": result.chunk_count,
         "warnings": result.warnings,
     }
