@@ -55,7 +55,7 @@ class ChatResponse(BaseModel):
 class UploadResponse(BaseModel):
     document_id: str
     file_name: str
-    status: str  # "indexed" (new or changed) or "unchanged" (same content as before)
+    status: str  # "indexed" (new document) or "duplicate" (same content already indexed)
     chunk_count: int
     warnings: list[str] = []
 

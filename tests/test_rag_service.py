@@ -52,6 +52,20 @@ class RagServiceTests(unittest.TestCase):
         })
         answer_query.assert_called_once_with("What is it?", [])
 
+    def test_sources_keep_same_name_documents_separate(self):
+        docs = [
+            Document(page_content="a", metadata={"document_id": "doc-1", "file_name": "notes.txt", "rerank_score": 6.0}),
+            Document(page_content="b", metadata={"document_id": "doc-2", "file_name": "notes.txt", "rerank_score": 5.0}),
+        ]
+        result = AnswerResult(text="Both [S1] [S2].", mode=AnswerMode.GROUNDED, context_documents=docs)
+        with patch.object(rag_service, "answer_query", return_value=result):
+            response = rag_service.ask_question("Which fruits?")
+
+        self.assertEqual(response["sources"], [
+            {"document": "notes.txt", "page": None, "score": 6.0},
+            {"document": "notes.txt", "page": None, "score": 5.0},
+        ])
+
     def test_ask_question_runs_guardrails_around_pipeline(self):
         result = AnswerResult(text="raw answer", mode=AnswerMode.GENERAL)
         with (

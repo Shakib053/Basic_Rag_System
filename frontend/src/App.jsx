@@ -73,7 +73,11 @@ function App() {
       }
 
       const data = await response.json()
-      setUploadMessage(`${data.file_name} ${data.status} (${data.chunk_count} chunks)`)
+      if (data.status === 'duplicate') {
+        setUploadMessage(`Already uploaded as ${data.file_name}, nothing new was added.`)
+      } else {
+        setUploadMessage(`${data.file_name} ${data.status} (${data.chunk_count} chunks)`)
+      }
       loadDocuments() // refresh the list so the new file shows up
     } catch {
       setUploadError('Could not reach the backend. Is uvicorn running on port 8000?')
@@ -153,7 +157,11 @@ function App() {
             {documents.map((doc) => (
               <li key={doc.document_id}>
                 <span className="source-name">{doc.file_name}</span>
-                <span className="source-score"> · {doc.file_type} · {doc.chunk_count} chunks</span>
+                <span className="source-score">
+                  {' '}· {doc.file_type} · {doc.chunk_count} chunks
+                  {/* The date tells apart two files with the same name. */}
+                  {doc.ingested_at && ` · ${new Date(doc.ingested_at).toLocaleDateString()}`}
+                </span>
               </li>
             ))}
           </ul>
