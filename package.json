@@ -1,0 +1,6 @@
+{
+  "private": true,
+  "scripts": {
+    "frontend": "npm --prefix frontend run dev"
+  }
+}
