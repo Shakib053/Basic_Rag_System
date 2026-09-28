@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, StringConstraints
 
 from app.services.rag_service import ask_question
@@ -14,6 +15,7 @@ from vectorstore.qdrant_store import get_document_source, list_document_records
 
 # Only files inside this folder are ever served back to the browser.
 DATA_DIR = Path("data")
+FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend" / "dist"
 
 
 logging.basicConfig(format="%(levelname)s:     %(message)s")
@@ -143,3 +145,14 @@ def remove_document(document_id: str):
     if not delete_uploaded_document(document_id):
         raise HTTPException(status_code=404, detail="Document not found.")
 
+
+if FRONTEND_DIR.is_dir():
+    app.mount("/assets", StaticFiles(directory=FRONTEND_DIR / "assets"), name="assets")
+
+    @app.get("/", include_in_schema=False)
+    def frontend():
+        return FileResponse(FRONTEND_DIR / "index.html")
+
+    @app.get("/favicon.svg", include_in_schema=False)
+    def favicon():
+        return FileResponse(FRONTEND_DIR / "favicon.svg")
