@@ -196,6 +196,18 @@ uvicorn app.main:app --reload 2>&1 | tee query.log
 
 This saves all server output, including query events, to `query.log`. Do not commit this file. In a deployed container, the hosting platform collects stdout; its log collector controls storage, access, retention, and search. Configure the platform or an external log service if you need durable query history.
 
+For a user request, the JSON events share the same `query_id`, allowing the major latency stages to be traced together:
+
+```ini
+query_id=abc123 stage=query_planning event=rag_stage_completed
+query_id=abc123 stage=retrieval event=rag_stage_completed
+query_id=abc123 stage=reranking event=rag_stage_completed
+query_id=abc123 stage=generation event=rag_stage_completed
+query_id=abc123 event=query_completed
+```
+
+Stage events include `duration_ms`. Query planning includes `generated_query_count`; retrieval includes `candidate_count`; reranking includes `input_count` and `selected_count`. This helps identify latency or failure bottlenecks without logging query, answer, or document text.
+
 Upload a document and list indexed documents over HTTP without the UI:
 
 ```bash

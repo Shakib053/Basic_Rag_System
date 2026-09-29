@@ -38,3 +38,14 @@ def log_query(query_id, started, entry_point, query, mode, reason):
         "reason": reason if reason in allowed_reasons else ("completed" if mode != "error" else "unexpected error"),
     }
     logger.info(json.dumps(event, separators=(",", ":")))
+
+
+def log_stage(query_id, stage, started, **metadata):
+    event = {
+        "event": "rag_stage_completed",
+        "query_id": query_id,
+        "stage": stage,
+        "duration_ms": round((perf_counter() - started) * 1000, 2),
+        **metadata,
+    }
+    logger.info(json.dumps(event, separators=(",", ":")))
