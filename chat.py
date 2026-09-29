@@ -80,7 +80,7 @@ if __name__ == "__main__":
         if handled:
             continue
 
-        result = answer_query(query, chat_history, document_ids=selected_document_ids)
+        result = answer_query(query, chat_history, document_ids=selected_document_ids, entry_point="cli")
         print(f"\nAI: {result.text}\n")
 
         chat_history.append(HumanMessage(content=query))

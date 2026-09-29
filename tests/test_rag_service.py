@@ -54,7 +54,7 @@ class RagServiceTests(unittest.TestCase):
                 {"document": "notes.md", "page": None, "score": -1.5},
             ],
         })
-        answer_query.assert_called_once_with("What is it?", [])
+        answer_query.assert_called_once_with("What is it?", [], entry_point="api")
 
     def test_sources_keep_same_name_documents_separate(self):
         docs = [
@@ -80,7 +80,7 @@ class RagServiceTests(unittest.TestCase):
             response = rag_service.ask_question("raw question")
 
         check_input.assert_called_once_with("raw question")
-        answer_query.assert_called_once_with("checked question", [])
+        answer_query.assert_called_once_with("checked question", [], entry_point="api")
         check_output.assert_called_once_with("raw answer")
         self.assertEqual(response["answer"], "checked answer")
 
