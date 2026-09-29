@@ -184,9 +184,17 @@ npm --prefix frontend run dev
 
 ### Query logs
 
-Each processed `/chat` or terminal question writes one JSON `query_completed` line to stdout when processing finishes, including handled and unexpected errors. Fields are `timestamp` (UTC), `query_id` (unique per query), `entry_point` (`api` or `cli`), `query_length` (characters), `duration_ms`, `mode` (`grounded`, `general`, or `error`), and `reason` (an approved outcome label). Invalid `/chat` requests rejected with HTTP 422 before processing do not produce a query event. Internal evaluation calls are not user query events.
+Each processed `/chat` or terminal question writes one JSON `query_completed` line to stdout when processing finishes, including handled and unexpected errors. When you run Uvicorn locally, this is the same terminal that runs the server. Fields are `timestamp` (UTC), `query_id` (unique per query), `entry_point` (`api` or `cli`), `query_length` (characters), `duration_ms`, `mode` (`grounded`, `general`, or `error`), and `reason` (an approved outcome label). Invalid `/chat` requests rejected with HTTP 422 before processing do not produce a query event. Internal evaluation calls are not user query events.
 
-The event does not include query or answer text, rewritten queries, document content, credentials, or a user identity. The app has no login or user ID. Logs go to process stdout, not an application file or database. In a deployed container, the host's log collector controls storage, access, retention, and search; configure those there if durable history is required.
+The event does not include query or answer text, rewritten queries, document content, credentials, or a user identity. The app has no login or user ID. Logs go to process stdout, not an application file or database.
+
+To retain a local copy while testing, use `tee` when starting the server:
+
+```bash
+uvicorn app.main:app --reload 2>&1 | tee query.log
+```
+
+This saves all server output, including query events, to `query.log`. Do not commit this file. In a deployed container, the hosting platform collects stdout; its log collector controls storage, access, retention, and search. Configure the platform or an external log service if you need durable query history.
 
 Upload a document and list indexed documents over HTTP without the UI:
 
