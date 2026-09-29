@@ -15,6 +15,7 @@ from prompts.answer import (
     GENERAL_FALLBACK_SYSTEM_PROMPT,
 )
 from app.services.guardrails import check_input, check_output
+from app.services.query_logging import log_query, start_query
 from retrieval.context_formatting import build_cited_context
 from embeddings.text_embeddings import get_text_embedding_model
 from retrieval.hybrid_retrieval import (
@@ -41,7 +42,6 @@ OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 LLM_TIMEOUT_SECONDS = int(os.getenv("LLM_TIMEOUT_SECONDS", "60"))
 
-SHOW_RETRIEVED_DOCS = True
 FINAL_CONTEXT_DOCS = 5
 QUERY_REWRITE_TIMEOUT_SECONDS = int(os.getenv("QUERY_REWRITE_TIMEOUT_SECONDS", "15"))
 RETRIEVAL_MODEL = "nvidia/nemotron-3-super-120b-a12b:free"
@@ -110,30 +110,7 @@ direct_prompt = ChatPromptTemplate.from_messages([
 ])
 
 def print_retrieved_docs(docs):
-    if not SHOW_RETRIEVED_DOCS:
-        return
-
-    lines = ["Retrieved documents used for this answer:"]
-    for index, doc in enumerate(docs, start=1):
-        file_name = doc.metadata.get("file_name", "unknown file")
-        chunk_index = doc.metadata.get("chunk_index", "unknown chunk")
-        page = doc.metadata.get("page")
-        rerank_score = doc.metadata.get("rerank_score")
-        
-        preview = " ".join(doc.page_content.split())
-
-        if len(preview) > 300:
-            preview = preview[:300] + "..."
-
-        score_text = ""
-        if rerank_score is not None:
-            score_text = f" | rerank score: {rerank_score:.4f}"
-
-        page_text = f" | page {page + 1}" if isinstance(page, int) else ""
-        lines.append(f"{index}. {file_name}{page_text} | chunk {chunk_index}{score_text}")
-        lines.append(f"   {preview}")
-
-    logger.info("\n".join(lines))
+    logger.info("Retrieved context chunks: %d", len(docs))
 
 hybrid_retriever = None
 # Concurrent API requests must not load the embedding model and store twice.
@@ -196,8 +173,8 @@ def get_query_plan(question, chat_history):
             QUERY_REWRITE_TIMEOUT_SECONDS,
             lambda: plan_queries(question, chat_history, retrieval_llm),
         )
-    except Exception as exc:
-        logger.warning(f"Query planning skipped: {exc}")
+    except Exception:
+        logger.warning("Query planning skipped")
         return QueryPlan(queries=[question.strip()])
 
 
@@ -216,8 +193,8 @@ def _general_answer(question, chat_history, queries, reason) -> AnswerResult:
             retrieval_queries=list(queries),
             reason=reason,
         )
-    except Exception as exc:
-        logger.warning(f"Answer generation failed: {exc}")
+    except Exception:
+        logger.warning("Answer generation failed")
         return AnswerResult(
             text="I couldn't generate an answer because the language model is unavailable.",
             mode=AnswerMode.ERROR,
@@ -226,14 +203,31 @@ def _general_answer(question, chat_history, queries, reason) -> AnswerResult:
         )
 
 
-def answer_query(question, chat_history=None, *, document_ids=None) -> AnswerResult:
+def answer_query(question, chat_history=None, *, document_ids=None, entry_point=None) -> AnswerResult:
+    """Return a result and record user-facing API/CLI queries once."""
+    if entry_point is None:
+        return _answer_query(question, chat_history, document_ids=document_ids)
+    query_id, started = start_query()
+    result = None
+    try:
+        result = _answer_query(question, chat_history, document_ids=document_ids)
+        return result
+    finally:
+        log_query(
+            query_id, started, entry_point, question,
+            result.mode.value if result else "error",
+            result.reason if result else "unexpected error",
+        )
+
+
+def _answer_query(question, chat_history=None, *, document_ids=None) -> AnswerResult:
     """Return a structured grounded, general, or error response."""
     chat_history = chat_history or []
     route = route_query(question)
-    logger.info(f"Query route: {route.mode.value} ({route.reason})")
+    logger.info("Query route: %s", route.mode.value)
 
     plan = get_query_plan(question, chat_history)
-    logger.info(f"RAG retrieval queries: {plan.queries}")
+    logger.info("RAG retrieval query count: %d", len(plan.queries))
 
     try:
         if not text_collection_exists():
@@ -244,8 +238,8 @@ def answer_query(question, chat_history=None, *, document_ids=None) -> AnswerRes
             for query in plan.queries
         ]
         candidate_docs = unique_documents(result_groups)
-    except Exception as exc:
-        logger.warning(f"Retrieval failed: {exc}")
+    except Exception:
+        logger.warning("Retrieval failed")
         return AnswerResult(
             text="I couldn't search your uploaded files because the retrieval system is unavailable.",
             mode=AnswerMode.ERROR,
@@ -261,8 +255,8 @@ def answer_query(question, chat_history=None, *, document_ids=None) -> AnswerRes
             candidate_docs,
             rerank_top_k=FINAL_CONTEXT_DOCS,
         )
-    except Exception as exc:
-        logger.warning(f"Reranking failed: {exc}")
+    except Exception:
+        logger.warning("Reranking failed")
         return AnswerResult(
             text="I couldn't search your uploaded files because the retrieval system is unavailable.",
             mode=AnswerMode.ERROR,
@@ -271,7 +265,7 @@ def answer_query(question, chat_history=None, *, document_ids=None) -> AnswerRes
         )
     retrieval_route = route_retrieval_result(docs)
     if retrieval_route.mode == QueryMode.DIRECT:
-        logger.info(f"Query route: {retrieval_route.mode.value} ({retrieval_route.reason})")
+        logger.info("Query route: %s", retrieval_route.mode.value)
         return _general_answer(question, chat_history, plan.queries, retrieval_route.reason)
 
     docs = relevant_documents(docs)
@@ -285,8 +279,8 @@ def answer_query(question, chat_history=None, *, document_ids=None) -> AnswerRes
             "question": question,
             "chat_history": chat_history,
         })
-    except Exception as exc:
-        logger.warning(f"Grounded answer generation failed: {exc}")
+    except Exception:
+        logger.warning("Grounded answer generation failed")
         return AnswerResult(
             text="I found relevant sources but couldn't generate an answer because the language model is unavailable.",
             mode=AnswerMode.ERROR,
@@ -345,7 +339,7 @@ def _sources_from_documents(docs) -> list[dict]:
 def ask_question(query: str) -> dict:
     """Answer one question with the full RAG pipeline (no chat history)."""
     safe_query = check_input(query)
-    result = answer_query(safe_query, [])
+    result = answer_query(safe_query, [], entry_point="api")
     return {
         "answer": check_output(result.text),
         "mode": result.mode.value,

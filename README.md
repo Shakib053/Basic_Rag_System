@@ -182,6 +182,12 @@ Then run the UI in a second terminal and open http://localhost:5173:
 npm --prefix frontend run dev
 ```
 
+### Query logs
+
+Each processed `/chat` or terminal question writes one JSON `query_completed` line to stdout when processing finishes, including handled and unexpected errors. Fields are `timestamp` (UTC), `query_id` (unique per query), `entry_point` (`api` or `cli`), `query_length` (characters), `duration_ms`, `mode` (`grounded`, `general`, or `error`), and `reason` (an approved outcome label). Invalid `/chat` requests rejected with HTTP 422 before processing do not produce a query event. Internal evaluation calls are not user query events.
+
+The event does not include query or answer text, rewritten queries, document content, credentials, or a user identity. The app has no login or user ID. Logs go to process stdout, not an application file or database. In a deployed container, the host's log collector controls storage, access, retention, and search; configure those there if durable history is required.
+
 Upload a document and list indexed documents over HTTP without the UI:
 
 ```bash
