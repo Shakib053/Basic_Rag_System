@@ -5,6 +5,7 @@ import os
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeoutError
+from time import perf_counter
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
@@ -15,7 +16,7 @@ from prompts.answer import (
     GENERAL_FALLBACK_SYSTEM_PROMPT,
 )
 from app.services.guardrails import check_input, check_output
-from app.services.query_logging import log_query, start_query
+from app.services.query_logging import log_query, log_stage, start_query
 from retrieval.context_formatting import build_cited_context
 from embeddings.text_embeddings import get_text_embedding_model
 from retrieval.hybrid_retrieval import (
@@ -178,12 +179,15 @@ def get_query_plan(question, chat_history):
         return QueryPlan(queries=[question.strip()])
 
 
-def _general_answer(question, chat_history, queries, reason) -> AnswerResult:
+def _general_answer(question, chat_history, queries, reason, *, query_id=None) -> AnswerResult:
     try:
+        started = perf_counter()
         response = (direct_prompt | answer_llm).invoke({
             "question": question,
             "chat_history": chat_history,
         })
+        if query_id is not None:
+            log_stage(query_id, "generation", started)
         text = str(response.content).strip()
         if not text.startswith(GENERAL_FALLBACK_PREFIX):
             text = f"{GENERAL_FALLBACK_PREFIX}\n\n{text}"
@@ -210,7 +214,7 @@ def answer_query(question, chat_history=None, *, document_ids=None, entry_point=
     query_id, started = start_query()
     result = None
     try:
-        result = _answer_query(question, chat_history, document_ids=document_ids)
+        result = _answer_query(question, chat_history, document_ids=document_ids, query_id=query_id)
         return result
     finally:
         log_query(
@@ -220,24 +224,32 @@ def answer_query(question, chat_history=None, *, document_ids=None, entry_point=
         )
 
 
-def _answer_query(question, chat_history=None, *, document_ids=None) -> AnswerResult:
+def _answer_query(question, chat_history=None, *, document_ids=None, query_id=None) -> AnswerResult:
     """Return a structured grounded, general, or error response."""
     chat_history = chat_history or []
     route = route_query(question)
     logger.info("Query route: %s", route.mode.value)
 
+    planning_started = perf_counter()
     plan = get_query_plan(question, chat_history)
+    if query_id is not None:
+        log_stage(query_id, "query_planning", planning_started, generated_query_count=len(plan.queries))
     logger.info("RAG retrieval query count: %d", len(plan.queries))
 
     try:
         if not text_collection_exists():
-            return _general_answer(question, chat_history, plan.queries, "document store is empty")
+            return _general_answer(
+                question, chat_history, plan.queries, "document store is empty", query_id=query_id
+            )
         logger.info("Retrieving documents...")
+        retrieval_started = perf_counter()
         result_groups = [
             get_hybrid_docs(query, document_ids=document_ids)
             for query in plan.queries
         ]
         candidate_docs = unique_documents(result_groups)
+        if query_id is not None:
+            log_stage(query_id, "retrieval", retrieval_started, candidate_count=len(candidate_docs))
     except Exception:
         logger.warning("Retrieval failed")
         return AnswerResult(
@@ -250,11 +262,17 @@ def _answer_query(question, chat_history=None, *, document_ids=None) -> AnswerRe
     logger.info("Selecting context...")
     rerank_query = plan.queries[-1]
     try:
+        reranking_started = perf_counter()
         docs = select_final_context_documents(
             rerank_query,
             candidate_docs,
             rerank_top_k=FINAL_CONTEXT_DOCS,
         )
+        if query_id is not None:
+            log_stage(
+                query_id, "reranking", reranking_started,
+                input_count=len(candidate_docs), selected_count=len(docs),
+            )
     except Exception:
         logger.warning("Reranking failed")
         return AnswerResult(
@@ -266,7 +284,7 @@ def _answer_query(question, chat_history=None, *, document_ids=None) -> AnswerRe
     retrieval_route = route_retrieval_result(docs)
     if retrieval_route.mode == QueryMode.DIRECT:
         logger.info("Query route: %s", retrieval_route.mode.value)
-        return _general_answer(question, chat_history, plan.queries, retrieval_route.reason)
+        return _general_answer(question, chat_history, plan.queries, retrieval_route.reason, query_id=query_id)
 
     docs = relevant_documents(docs)
     print_retrieved_docs(docs)
@@ -274,11 +292,14 @@ def _answer_query(question, chat_history=None, *, document_ids=None) -> AnswerRe
 
     logger.info("Generating answer...")
     try:
+        generation_started = perf_counter()
         response = (prompt | answer_llm).invoke({
             "context": context,
             "question": question,
             "chat_history": chat_history,
         })
+        if query_id is not None:
+            log_stage(query_id, "generation", generation_started)
     except Exception:
         logger.warning("Grounded answer generation failed")
         return AnswerResult(
